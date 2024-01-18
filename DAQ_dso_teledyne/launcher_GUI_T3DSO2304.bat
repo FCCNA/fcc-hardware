@@ -1,1 +1,0 @@
-C:/Users/Belle2/anaconda3/Scripts/activate & conda activate base & C:/Users/Belle2/anaconda3/python.exe d:/Repositories/fcc-hardware/DAQ_dso_teledyne/GUI_T3DSO2304.py &

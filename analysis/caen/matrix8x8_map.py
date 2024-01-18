@@ -1,0 +1,72 @@
+# Creazione del dizionario vuoto
+sipm_map = {}
+
+# Riempimento del dizionario con le chiavi da 0 a 7
+for i in range(8):
+    sipm_map[i] = {}
+
+# Riempimento dei valori all'interno del dizionario
+sipm_map[0][0] = 35
+sipm_map[0][1] = 33
+sipm_map[0][2] = 62
+sipm_map[0][3] = 60
+sipm_map[0][4] = 3
+sipm_map[0][5] = 1
+sipm_map[0][6] = 30
+sipm_map[0][7] = 28
+sipm_map[1][0] = 37
+sipm_map[1][1] = 39
+sipm_map[1][2] = 56
+sipm_map[1][3] = 58
+sipm_map[1][4] = 5
+sipm_map[1][5] = 7
+sipm_map[1][6] = 24
+sipm_map[1][7] = 26
+sipm_map[2][0] = 43
+sipm_map[2][1] = 41
+sipm_map[2][2] = 54
+sipm_map[2][3] = 52
+sipm_map[2][4] = 11
+sipm_map[2][5] = 9
+sipm_map[2][6] = 22
+sipm_map[2][7] = 20
+sipm_map[3][0] = 45
+sipm_map[3][1] = 47
+sipm_map[3][2] = 48
+sipm_map[3][3] = 50
+sipm_map[3][4] = 13
+sipm_map[3][5] = 15
+sipm_map[3][6] = 16
+sipm_map[3][7] = 18
+sipm_map[4][0] = 51
+sipm_map[4][1] = 49
+sipm_map[4][2] = 46
+sipm_map[4][3] = 44
+sipm_map[4][4] = 19
+sipm_map[4][5] = 17
+sipm_map[4][6] = 14
+sipm_map[4][7] = 12
+sipm_map[5][0] = 53
+sipm_map[5][1] = 55
+sipm_map[5][2] = 40
+sipm_map[5][3] = 42
+sipm_map[5][4] = 21
+sipm_map[5][5] = 23
+sipm_map[5][6] = 8
+sipm_map[5][7] = 10
+sipm_map[6][0] = 59
+sipm_map[6][1] = 57
+sipm_map[6][2] = 38
+sipm_map[6][3] = 36
+sipm_map[6][4] = 27
+sipm_map[6][5] = 25
+sipm_map[6][6] = 6
+sipm_map[6][7] = 4
+sipm_map[7][0] = 61
+sipm_map[7][1] = 63
+sipm_map[7][2] = 32
+sipm_map[7][3] = 34
+sipm_map[7][4] = 29
+sipm_map[7][5] = 31
+sipm_map[7][6] = 0
+sipm_map[7][7] = 2

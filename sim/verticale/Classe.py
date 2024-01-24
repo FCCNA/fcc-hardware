@@ -76,7 +76,7 @@ t_GBO = pd.read_csv('trasmittanza/BGO.asc', names=['lambd', 't'], skiprows=90, s
 f_sipm = interp1d(sipm.lambd, sipm.pde/100, bounds_error=False, fill_value=0) #eff sipm
 f_filtro = interp1d(filtro.lambd, filtro.pde/100, bounds_error=False, fill_value=0) #eff filtro
 
-t_f = interp1d(t_GBO.lambd, t_GBO.t, bounds_error=False, fill_value=0) #trasmittanza
+t_f = interp1d(t_GBO.lambd, t_GBO.t/100, bounds_error=False, fill_value=0) #trasmittanza
 e_f = interp1d(e_GBO.lambd, e_GBO.e, bounds_error=False, fill_value=0) #emissione
 
 #normalizzo spettro di emissione

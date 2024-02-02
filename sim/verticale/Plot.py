@@ -53,17 +53,16 @@ def Draw(muon_df):
 
 def Drawfacce(data_per_faccia):
     # Disegno istogrammi per tipo di percorso
-    name = ['UP-DOWN', 'DOWN-L1', 'DOWN-L2', 'DOWN-L3', 'DOWN-L4', 'UP-L1', 'UP-L2', 'UP-L3', 'UP-L4',
-            'L1-L2', 'L1-L3: ', 'L1-L4: ', 'L2-L3', 'L2-L4', 'L3-L4']
+    name = ['UP-DOWN', 'DOWN-X1', 'DOWN-X2', 'DOWN-Y1', 'DOWN-Y2', 'UP-X1', 'UP-X2', 'UP-Y1', 'UP-Y2',
+            'X1-X2', 'X1-Y1', 'X1-Y2', 'X2-Y1', 'X2-Y2', 'Y1-Y2']
     
     for i in range(len(data_per_faccia)):
         plt.figure(figsize=(8, 6))
         plt.hist(data_per_faccia[i], bins=100, color='blue', alpha=0.7)
-        plt.xlabel('Photons')
-        plt.ylabel('Frequency')
-        plt.title(f'Histogram of Photons type {name[i]}')
+        plt.xlabel('Fotoni')
+        plt.title(f'Istogramma dei fotoni {name[i]}')
         plt.grid(True)
-        plt.savefig(f"Figures/histogram_photons_type_{name[i]}.png")
+        plt.savefig(f"Figures/hp_{name[i]}.png")
         plt.show()
     
     return(0)
@@ -80,7 +79,7 @@ def Draw3D(sis, scin, hitmax_measure, x0s, y0s, z0s, us, vs, ws, x1s, y1s, z1s):
     ax.quiver(x0s[hitmax_measure_indices], y0s[hitmax_measure_indices],
               z0s[hitmax_measure_indices], us[hitmax_measure_indices],
               vs[hitmax_measure_indices], ws[hitmax_measure_indices],
-              length=2, arrow_length_ratio=0, color='darkgreen', alpha=0.4)
+              length=2, arrow_length_ratio=0, color='darkgreen', alpha=0.15)
     ax.scatter(x1s[hitmax_measure_indices], y1s[hitmax_measure_indices],
                z1s[hitmax_measure_indices], s=4, color='darkgreen')
     ax.set_xlim3d(-0.1, 0.1)

@@ -270,8 +270,8 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
             new=[]
             for h in i:
                 if h!=0:
-                    photo = (h * scin.density * scin.dedx * scin.light_yield *
-                             sis.detection_eff * sis.geometric_eff)
+                    photo = h * sis.geometric_eff*(eff_S1 * scin.density * scin.dedx * scin.light_yield +
+                                                   eff_C1 * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137)
                     new.append(photo)
             data_per_faccia.append(new)
         go=Plot.Drawfacce(data_per_faccia)

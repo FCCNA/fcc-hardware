@@ -161,7 +161,7 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     '''
 
     #dark counting
-    #distance /= 1.03
+    #distance *= 1.03
     
     scint_phor = eff_S1 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
     chere_phor = eff_C1 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137

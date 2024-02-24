@@ -137,6 +137,7 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     eff_C2 = Classe.effxlambdaC(x)
     
     #funzione di eff per distribuzione di enrgia in lunghezza
+    '''
     distances = np.arange(0,max(distance)*1.2,0.001)
     eff_list=[]
     for dis in distances:
@@ -146,11 +147,21 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     for dist in distance:
         x=np.arange(0, dist, 0.001)
         distanceweff.append(np.trapz(len_eff(x),x))
-    #distance = np.array(distanceweff)
+    distance = np.array(distanceweff)
+    '''
     
     #funzione di assorbimento
     decad = np.e**((-(scin.x/2))/(scin.radlen*5))
     distance *=decad
+
+    #funzione di riflessione
+    '''
+    refl = np.arcsin(1.55/scin.rifrazione)
+    distance *=(1 - 2*refl/np.pi)
+    '''
+
+    #dark counting
+    #distance /= 1.03
     
     scint_phor = eff_S1 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
     chere_phor = eff_C1 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137

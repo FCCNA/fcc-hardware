@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 import Plot
 import Classe
 
-def run(sis, scin, time, filtro_sim = False, Draw_3D = False, Draw_per_faccia = False):
+def run(sis, scin, time, Draw_3D = False, Draw_per_faccia = False):
     
     #Inizializzazione, trova numero di muoni ed i loro angoli di incidenza
     expected_muons_min = sis.tup_x * sis.tup_y * 9500
@@ -100,10 +100,12 @@ def run(sis, scin, time, filtro_sim = False, Draw_3D = False, Draw_per_faccia = 
     hitmax_measure15 =  hitmax_trigger & hitmax_measure_lat1 & hitmax_measure_lat2
 
     hitmax_list = [hitmax_measure1, hitmax_measure2, hitmax_measure3, hitmax_measure4, hitmax_measure5,
-           hitmax_measure6, hitmax_measure7, hitmax_measure8, hitmax_measure9, hitmax_measure10,
-           hitmax_measure11, hitmax_measure12, hitmax_measure13, hitmax_measure14, hitmax_measure15]
+                   hitmax_measure6, hitmax_measure7, hitmax_measure8, hitmax_measure9, hitmax_measure10,
+                   hitmax_measure11, hitmax_measure12, hitmax_measure13, hitmax_measure14, hitmax_measure15]
     
-    hitmax_measure = (hitmax_measure1 | hitmax_measure2 | hitmax_measure3 | hitmax_measure4 | hitmax_measure5 | hitmax_measure6 | hitmax_measure7 | hitmax_measure8 | hitmax_measure9 | hitmax_measure10 | hitmax_measure11 | hitmax_measure12 | hitmax_measure13 | hitmax_measure14 | hitmax_measure15)
+    hitmax_measure = (hitmax_measure1 | hitmax_measure2 | hitmax_measure3 | hitmax_measure4 | hitmax_measure5
+                      | hitmax_measure6 | hitmax_measure7 | hitmax_measure8 | hitmax_measure9 | hitmax_measure10
+                      | hitmax_measure11 | hitmax_measure12 | hitmax_measure13 | hitmax_measure14 | hitmax_measure15)
     
     numlist = []
     for hitmax in hitmax_list:

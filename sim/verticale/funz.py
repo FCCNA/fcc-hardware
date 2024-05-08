@@ -6,7 +6,8 @@ from scipy.interpolate import interp1d
 import Plot
 import Classe
 
-def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per_faccia = False):
+def run(sis, scin, time, filtro_sim = False, Draw_3D = False, Draw_per_faccia = False):
+    
     #Inizializzazione, trova numero di muoni ed i loro angoli di incidenza
     expected_muons_min = sis.tup_x * sis.tup_y * 9500
     n = int(expected_muons_min * time * 60)
@@ -127,16 +128,23 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     distance=np.zeros(n)
     for i in range(len(distance_list)):
         distance+=hitmax_list[i]*distance_list[i]
+
+
+    #EFFICIENZE
+
+    #filtro
+    if filtro_sim[0] == True:
+        f_palto_A, f_pbasso_A, f_palto_B, f_pbasso_B = filtro_sim[1]
     
-    x = np.arange(200, filtro1, 1)
-    eff_S1 = Classe.effxlambdaS(x)
-    eff_C1 = Classe.effxlambdaC(x)
+        x = np.arange(f_palto_A, f_pbasso_A, 1)
+        eff_S1 = Classe.effxlambdaS(x)
+        eff_C1 = Classe.effxlambdaC(x)
+        
+        x = np.arange(f_palto_B, f_pbasso_B, 1)
+        eff_S2 = Classe.effxlambdaSf(x)
+        eff_C2 = Classe.effxlambdaCf(x)
     
-    x = np.arange(200, filtro2, 1)
-    eff_S2 = Classe.effxlambdaSf(x)
-    eff_C2 = Classe.effxlambdaCf(x)
-    
-    #funzione di eff per distribuzione di enrgia in lunghezza
+    #distribuzione di energia in lunghezza nel caso di sciami
     '''
     distances = np.arange(0,max(distance)*1.2,0.001)
     eff_list=[]
@@ -150,71 +158,83 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     distance = np.array(distanceweff)
     '''
     
-    #funzione di assorbimento
+    #Attenuazione
     decad = np.e**((-(scin.z/2))/(scin.radlen*5))
     distance *=decad
 
-    #funzione di riflessione
+    #Efficienza di riflessione
     '''
+    pcrit_cr = 1 - np.sqrt(1-(1.55/scin.rifrazione)**2) 
+    pcrit_ce = 1 - np.sqrt(1-(1/scin.rifrazione)**2) 
+    #prima riflessione
+    *= pcrit_cr
+
+    #seconda riflessione
+    + (1-geometric_eff)*(pcrit_cr - pcrit_ce)
+    
     refl = np.arcsin(1.55/scin.rifrazione)
     distance *=(1 - 2*refl/np.pi)
     '''
 
-    #dark counting
-    #distance *= 1.03
-    
-    scint_phou = eff_S1 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
-    scint_phod = eff_S2 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
+    #Dark counting & Saturazione
+    '''
+    distance *= 1.03
+    '''
 
-    chere_phou = eff_C1 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
-    chere_phod = eff_C2 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
-    chere_phou*=0
-    chere_phod*=2
+
+    #CALCOLO FOTONI
+    scint_A = eff_S1 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
+    scint_B = eff_S2 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
+
+    chere_A = eff_C1 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
+    chere_B = eff_C2 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
+    chere_A*=0
+    chere_B*=2
     
     muon_data = []
     for i in range(n):
         muon_entry = {'trigger': hitmax_trigger[i], 'measure': hitmax_measure[i],
-                      'scintu': scint_phou[i], 'chereu': chere_phou[i],
-                      'scintd': scint_phod[i], 'chered': chere_phod[i],
-                      'photou': scint_phou[i] + chere_phou[i], 'photod': scint_phod[i] + chere_phod[i]}
+                      'scintA': scint_A[i], 'chereA': chere_A[i],
+                      'scintB': scint_B[i], 'chereB': chere_B[i],
+                      'photoA': scint_A[i] + chere_A[i], 'photoB': scint_B[i] + chere_B[i]}
         muon_data.append(muon_entry)
     muon_df = pd.DataFrame(muon_data)
     
     #Simulazione dati reali, conversione in carica e test d'ipotesi
-    photo_listu = (muon_df.query('trigger'))['photou'].tolist()
-    photo_listd = (muon_df.query('trigger'))['photod'].tolist()
+    photo_listA = (muon_df.query('trigger'))['photoA'].tolist()
+    photo_listB = (muon_df.query('trigger'))['photoB'].tolist()
 
-    scint_listu = (muon_df.query('measure'))['scintu'].tolist()
-    scint_listd = (muon_df.query('measure'))['scintd'].tolist()
-    chere_listu = (muon_df.query('measure'))['chereu'].tolist()
-    chere_listd = (muon_df.query('measure'))['chered'].tolist()
+    scint_listA = (muon_df.query('measure'))['scintA'].tolist()
+    scint_listB = (muon_df.query('measure'))['scintB'].tolist()
+    chere_listA = (muon_df.query('measure'))['chereA'].tolist()
+    chere_listB = (muon_df.query('measure'))['chereB'].tolist()
 
-    hscintu = ROOT.TH1F("hscintu", "Scintu", 1000, 00, 00)
-    hscintd = ROOT.TH1F("hscintd", "Scintd", 1000, 00, 00)
-    hchereu = ROOT.TH1F("hchereu", "Chereu", 1000, 00, 00)
-    hchered = ROOT.TH1F("hscintd", "Scintd", 1000, 00, 00)
+    hscintA = ROOT.TH1F("hscintA", f"Fotoni di scintillazione {stateA}", 1000, 00, 00)
+    hscintB = ROOT.TH1F("hscintB", f"Fotoni di scintillazione {stateB}", 1000, 00, 00)
+    hchereA = ROOT.TH1F("hchereA", f"Fotoni Cherenkov {stateA}", 1000, 00, 00)
+    hchereB = ROOT.TH1F("hscintB", f"Fotoni Cherenkov {stateB}", 1000, 00, 00)
     
-    hist_carica0u = ROOT.TH1F("hist_carica0u", "Carica0u", 100, -600, 30)
-    hist_caricau = ROOT.TH1F("hist_caricau", "Caricau", 100, -6000, -10)
-    hist_carica0d = ROOT.TH1F("hist_carica0d", "Carica0d", 100, 0, 20)
-    hist_caricad = ROOT.TH1F("hist_caricad", "Caricad", 100, 00, 00)
+    hist_caricaA0 = ROOT.TH1F("hist_caricaA0", f"Carica totale {stateA}", 100, -600, 30)
+    hist_caricaA = ROOT.TH1F("hist_caricaA", f"Carica cut {stateA}", 100, -6000, -10)
+    hist_caricaB0 = ROOT.TH1F("hist_caricaB0", f"Carica totale {stateB}", 100, 0, 20)
+    hist_caricadB = ROOT.TH1F("hist_caricaB", f"Carica cut {stateB}", 100, 00, 00)
     
     sigma = 0.1
-    noise_up = -15
-    noise_down = 2.5
-    guadagno_up = 0.308
-    guadagno_down = 0.5
+    noise_A = -15
+    noise_B = 2.5
+    guadagno_A = 0.308
+    guadagno_B = 0.5
     
-    for i in range(len(photo_listu)):
-        if photo_listd[i]<noise_down:
-            electrons_down = noise_down + ROOT.gRandom.Landau(guadagno_down*ROOT.gRandom.Poisson(photo_listd[i]),
-                                                              sigma*((photo_listd[i]+noise_down)**0.8))
+    for i in range(len(photo_listB)):
+        if photo_listB[i]<noise_B:
+            electrons_B = noise_B + ROOT.gRandom.Landau(guadagno_B*ROOT.gRandom.Poisson(photo_listB[i]), sigma*((photo_listB[i]+noise_B)**0.8))
         else:
-            electrons_down = noise_down + ROOT.gRandom.Landau(guadagno_down*ROOT.gRandom.Poisson(photo_listd[i]),
-                                                              sigma*((photo_listd[i])**0.8))
-        
-        electrons_up = - (noise_up + ROOT.gRandom.Landau(guadagno_up*ROOT.gRandom.Poisson(photo_listu[i]),
-                                                             sigma*(photo_listu[i]**0.8)))
+            electrons_B = noise_B + ROOT.gRandom.Landau(guadagno_B*ROOT.gRandom.Poisson(photo_listB[i]), sigma*((photo_listB[i])**0.8))
+
+        if photo_listA[i]<noise_A:
+            electrons_A = - (noise_A + ROOT.gRandom.Landau(guadagno_A*ROOT.gRandom.Poisson(photo_listA[i]), sigma*((photo_listA[i]+noise_A)**0.8)))
+        else:
+            electrons_A = - (noise_A + ROOT.gRandom.Landau(guadagno_A*ROOT.gRandom.Poisson(photo_listA[i]), sigma*(photo_listA[i]**0.8)))
         
         hist_carica0u.Fill(electrons_up)
         hist_carica0d.Fill(electrons_down)
@@ -223,24 +243,20 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
 
 
     for i in range(len(scint_listu)):
-        hscintu.Fill(((ROOT.gRandom.Landau(guadagno_up*ROOT.gRandom.Poisson(scint_listu[i]),
-                                           sigma*(scint_listu[i]**0.8)))/guadagno_up))
-        hscintd.Fill(((ROOT.gRandom.Landau(guadagno_down*ROOT.gRandom.Poisson(scint_listd[i]),
-                                           sigma*(scint_listd[i]**0.8)))/guadagno_down))
-        hchereu.Fill(((ROOT.gRandom.Landau(guadagno_up*ROOT.gRandom.Poisson(chere_listu[i]),
-                                           sigma*(chere_listu[i]**0.8)))/guadagno_up))
-        hchered.Fill(((ROOT.gRandom.Landau(guadagno_down*ROOT.gRandom.Poisson(chere_listd[i]),
-                                           sigma*(chere_listd[i]**0.8)))/guadagno_down))
+        hscintA.Fill(((ROOT.gRandom.Landau(guadagno_A*ROOT.gRandom.Poisson(scint_listA[i]), sigma*(scint_listA[i]**0.8)))/guadagno_A))
+        hscintB.Fill(((ROOT.gRandom.Landau(guadagno_B*ROOT.gRandom.Poisson(scint_listB[i]), sigma*(scint_listB[i]**0.8)))/guadagno_B))
+        hchereA.Fill(((ROOT.gRandom.Landau(guadagno_A*ROOT.gRandom.Poisson(chere_listA[i]), sigma*(chere_listA[i]**0.8)))/guadagno_A))
+        hchereB.Fill(((ROOT.gRandom.Landau(guadagno_B*ROOT.gRandom.Poisson(chere_listB[i]), sigma*(chere_listD[i]**0.8)))/guadagno_B))
 
     #Test d'ipotesi
-    mean = hscintu.GetMean()
-    chere_medio = hchereu.GetMean()
-    area_tot = hscintu.Integral(0, hscintu.GetNbinsX() + 1)
+    mean = hscintA.GetMean()
+    chere_medio = hchereA.GetMean()
+    area_tot = hscintA.Integral(0, hscintA.GetNbinsX() + 1)
     alpha = 0.05
     x_cut = 0
-    nmax = hscintu.GetBinLowEdge(hscintu.FindLastBinAbove())
+    nmax = hscintA.GetBinLowEdge(hscintA.FindLastBinAbove())
     while x_cut < nmax:
-        area_from_x_cut = (hscintu.Integral(hscintu.FindBin(x_cut), hscintu.GetNbinsX() + 1))
+        area_from_x_cut = (hscintA.Integral(hscintA.FindBin(x_cut), hscintA.GetNbinsX() + 1))
         if area_from_x_cut / area_tot <= alpha:
             break
         x_cut += 1
@@ -249,18 +265,18 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     print('# fotoni dai quali siamo sicuri di distinguere i Fotoni cherenkov ', x_cut - mean )
     print('chere med: ',chere_medio)
     x_obs = mean + chere_medio
-    area = (hscintu.Integral(hscintu.FindBin(x_obs), hscintu.GetNbinsX() + 1))
+    area = (hscintA.Integral(hscintA.FindBin(x_obs), hscintA.GetNbinsX() + 1))
     p_value = area / area_tot
     print('p - value: ',p_value)
 
-    mean = hscintd.GetMean()
-    chere_medio = hchered.GetMean()
-    area_tot = hscintd.Integral(0, hscintd.GetNbinsX() + 1)
+    mean = hscintB.GetMean()
+    chere_medio = hchereB.GetMean()
+    area_tot = hscintB.Integral(0, hscintB.GetNbinsX() + 1)
     alpha = 0.05
     x_cut = 0
-    nmax = hscintd.GetBinLowEdge(hscintd.FindLastBinAbove())
+    nmax = hscintB.GetBinLowEdge(hscintB.FindLastBinAbove())
     while x_cut < nmax:
-        area_from_x_cut = (hscintd.Integral(hscintd.FindBin(x_cut), hscintd.GetNbinsX() + 1))
+        area_from_x_cut = (hscintB.Integral(hscintB.FindBin(x_cut), hscintB.GetNbinsX() + 1))
         if area_from_x_cut / area_tot <= alpha:
             break
         x_cut += 1
@@ -269,7 +285,7 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
     print('# fotoni dai quali siamo sicuri di distinguere i Fotoni cherenkov ', x_cut - mean )
     print('chere med: ',chere_medio)
     x_obs = mean + chere_medio
-    area = (hscintd.Integral(hscintd.FindBin(x_obs), hscintd.GetNbinsX() + 1))
+    area = (hscintB.Integral(hscintB.FindBin(x_obs), hscintB.GetNbinsX() + 1))
     p_value = area / area_tot
     print('p - value: ',p_value)
 
@@ -295,7 +311,7 @@ def run(sis, scin, time, filtro1 = 900, filtro2 = 900, Draw_3D = False, Draw_per
 
     a=Plot.Draw(muon_df)
 
-    disegna = [hist_carica0u, hist_carica0d, hist_caricau, hist_caricad]
+    disegna = [hist_caricaA0, hist_caricaB0, hist_caricaA, hist_caricaB]
     for graph in disegna:
         a = Plot.drawroot(graph)
 

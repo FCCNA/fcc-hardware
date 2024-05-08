@@ -131,18 +131,6 @@ def run(sis, scin, time, filtro_sim = False, Draw_3D = False, Draw_per_faccia = 
 
 
     #EFFICIENZE
-
-    #filtro
-    if filtro_sim[0] == True:
-        f_palto_A, f_pbasso_A, f_palto_B, f_pbasso_B = filtro_sim[1]
-    
-        x = np.arange(f_palto_A, f_pbasso_A, 1)
-        eff_S1 = Classe.effxlambdaS(x)
-        eff_C1 = Classe.effxlambdaC(x)
-        
-        x = np.arange(f_palto_B, f_pbasso_B, 1)
-        eff_S2 = Classe.effxlambdaSf(x)
-        eff_C2 = Classe.effxlambdaCf(x)
     
     #distribuzione di energia in lunghezza nel caso di sciami
     '''

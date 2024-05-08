@@ -75,9 +75,20 @@ sipmB = pd.read_csv('S14460_pde.csv', names=['lambd', 'pde'], sep='; ', decimal=
 e_GBO = pd.read_csv(r'emissione/BGO.csv', skiprows=20, skipfooter=50, sep=';', decimal=',', names=['lambd', 'e'])
 t_GBO = pd.read_csv('trasmittanza/BGO.asc', names=['lambd', 't'], skiprows=90, sep='\t', decimal='.')
 
-if filtri_sim
-filtroA = pd.read_csv('filtri/BGOug1.asc', names=['lambd', 'pde'], skiprows=90, sep='\t', decimal='.')
-filtroB = pd.read_csv('filtri/BGOug1.asc', names=['lambd', 'pde'], skiprows=90, sep='\t', decimal='.')
+if filtro_sim[0] == True:
+    f_palto_A, f_pbasso_A, f_palto_B, f_pbasso_B = filtro_sim[1]
+
+    x = np.arange(f_palto_A, f_pbasso_A, 1)
+    data = [ [x[i], 1] for i in range(len(x) ]
+    filtroA = pd.DataFrame(data , columns = ['lambd','pde'])
+
+    x = np.arange(f_palto_B, f_pbasso_B, 1)
+    data = [ [x[i], 1] for i in range(len(x) ]
+    filtroB =pd.DataFrame(data , columns = ['lambd','pde'])
+    
+else:
+    filtroA = pd.read_csv('filtri/BGOug1.asc', names=['lambd', 'pde'], skiprows=90, sep='\t', decimal='.')
+    filtroB = pd.read_csv('filtri/BGOug1.asc', names=['lambd', 'pde'], skiprows=90, sep='\t', decimal='.')
 
 # Creo funzioni "continue" per le efficienze
 f_sipmA = interp1d(sipmA.lambd, sipmA.pde/100, bounds_error=False, fill_value=0)
@@ -115,11 +126,3 @@ def eff_CB(x):
     integrale = trapz(tot,x)
     return(integrale)
 
-
-#funzione di eff per distribuzione di enrgia in lunghezza
-distances = arange(0,0.06,0.001)
-eff_list=[]
-for dis in distances:
-    eff_list.append(ROOT.Math.landau_cdf(dis, 0.005, 0.004))
-
-len_eff = interp1d(distances, eff_list, bounds_error=False)

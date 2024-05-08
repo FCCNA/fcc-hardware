@@ -171,11 +171,11 @@ def run(sis, scin, time, filtro_sim = False, Draw_3D = False, Draw_per_faccia = 
 
 
     #CALCOLO FOTONI
-    scint_A = eff_S1 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
-    scint_B = eff_S2 * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
+    scint_A = Classe.effSA * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
+    scint_B = Classe.effSB * sis.geometric_eff * distance * scin.density * scin.dedx * scin.light_yield
 
-    chere_A = eff_C1 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
-    chere_B = eff_C2 * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
+    chere_A = Classe.effCA * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
+    chere_B = Classe.effCB * sis.geometric_eff * distance * (1- 1/(scin.rifrazione*0.99)**2)*2*np.pi/137
     chere_A*=0
     chere_B*=2
     

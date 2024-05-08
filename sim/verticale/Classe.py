@@ -106,23 +106,19 @@ int_norm = trapz(y_norm,x_norm)
 e_f = interp1d(e_GBO.lambd, e_GBO.e/int_norm, bounds_error=False, fill_value=0)
 
 
-def eff_SA(x):
-    tot = f_sipmA(x) * t_f(x) * e_f(x) * f_filtroA(x)
-    integrale = trapz(tot,x)
-    return(integrale)
-    
-def eff_SB(x):
-    tot = f_sipmB(x) * t_f(x) * e_f(x) * f_filtroB(x)
-    integrale = trapz(tot,x)
-    return(integrale)
+#Calcolo efficienze
+x = np.arange(lmin, lmax, 1)
 
-def eff_CA(x):
-    tot = f_sipmB(x) * t_f(x) * f_filtroA(x) * (1/x**2)*(10**9)
-    integrale = trapz(tot,x)
-    return(integrale)
+tot = f_sipmA(x) * t_f(x) * e_f(x) * f_filtroA(x)
+eff_SA = trapz(tot,x)
 
-def eff_CB(x):
-    tot = f_sipmB(x) * t_f(x) * f_filtroB(x) * (1/x**2)*(10**9)
-    integrale = trapz(tot,x)
-    return(integrale)
+tot = f_sipmB(x) * t_f(x) * e_f(x) * f_filtroB(x)
+eff_SB = trapz(tot,x)
+
+tot = f_sipmB(x) * t_f(x) * f_filtroA(x) * (1/x**2)*(10**9)
+eff_CA = trapz(tot,x)
+
+tot = f_sipmB(x) * t_f(x) * f_filtroB(x) * (1/x**2)*(10**9)
+eff_CB = trapz(tot,x)
+
 

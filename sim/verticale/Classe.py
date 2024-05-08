@@ -1,29 +1,3 @@
-class System:
-    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint,
-                 geometric_eff, lambda_min, lambda_max):
-        self.name = name
-        self.tup_x = tup_x
-        self.tup_y = tup_y
-        self.tdown_x = tdown_x
-        self.tdown_y = tdown_y
-        self.dt = distanza_t
-        self.tup_scint = tup_scint
-        self.geometric_eff = geometric_eff
-        self.lambda_min = lambda_min
-        self.lambda_max = lambda_max
-
-class Scintillatore:
-    def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss):
-        self.name = name
-        self.z = dim_z
-        self.y = dim_y
-        self.x = dim_x
-        self.density = density
-        self.light_yield = light_yield
-        self.rifrazione = rifrazione
-        self.radlen = radlen
-        self.dedx = ene_loss
-
 #Parametri del sistema, distanze in m
 '''
 tup e tdown sono le dimesioni lungo gli assi x ed y dei trigger in alto ed in basso,
@@ -40,31 +14,42 @@ distanza_t = 0.12
 tup_scint = 0.025
 geometric_eff = 0.0625*0.5
 
-sistema1=System('sys', tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint,
-                geometric_eff, lambda_min, lambda_max)
 
-# Cristalli, distanze in m, densità in Kg/m^3, light yield in #/MeV
-'''
-dim x,y e z sono le dimensioni del cristallo,
-radlen è la lunghezza di radiazione del materiale.
-ene_loss è la perdita di energia del muone al mip nel materiale in MeV / (kg/ m^2)
-'''
-
+# Cristallo: dim x, y e z sono le dimensioni del cristallo in m
 dim_z = 0.05
 dim_y = 0.012
 dim_x = 0.012
 
-BGO=Scintillatore('BGO', dim_z, dim_y, dim_x, density=7130, light_yield=8200, rifrazione = 2.15, radlen = 0.011, ene_loss=0.1272)
-PWO=Scintillatore('PWO', dim_z, dim_y, dim_x, density=8280, light_yield=190, rifrazione = 2.16, radlen = 0.009, ene_loss=0.1225)
 
+#Fine edit
+class System:
+    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint, geometric_eff):
+        self.name = name
+        self.tup_x = tup_x
+        self.tup_y = tup_y
+        self.tdown_x = tdown_x
+        self.tdown_y = tdown_y
+        self.dt = distanza_t
+        self.tup_scint = tup_scint
+        self.geometric_eff = geometric_eff
 
+class Scintillatore:
+    def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss):
+        self.name = name
+        self.z = dim_z
+        self.y = dim_y
+        self.x = dim_x
+        self.density = density
+        self.light_yield = light_yield
+        self.rifrazione = rifrazione
+        self.radlen = radlen
+        self.dedx = ene_loss
 
 
 # Dati presi in esperimento per avere funzione di efficienza in lambda
 import pandas as pd
 from scipy.interpolate import interp1d
 from numpy import arange, trapz
-import ROOT
 
 lmin, lmax = 200, 900 #lambda min e max accettate dal sistema
 
@@ -122,3 +107,9 @@ tot = f_sipmB(x) * t_f(x) * f_filtroB(x) * (1/x**2)*(10**9)
 eff_CB = trapz(tot,x)
 
 
+#Sistemi
+sistema1=System('sys', tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint, geometric_eff, lambda_min, lambda_max)
+
+#Scintillatori, densità in Kg/m^3, light yield in #/MeV, radlen in m, ene_loss in MeV / (kg/ m^2)
+BGO=Scintillatore('BGO', dim_z, dim_y, dim_x, density=7130, light_yield=8200, rifrazione = 2.15, radlen = 0.011, ene_loss=0.1272)
+PWO=Scintillatore('PWO', dim_z, dim_y, dim_x, density=8280, light_yield=190, rifrazione = 2.16, radlen = 0.009, ene_loss=0.1225)

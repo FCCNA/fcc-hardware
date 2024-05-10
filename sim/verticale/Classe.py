@@ -1,37 +1,37 @@
-#Parametri del sistema, distanze in m
-'''
-tup e tdown sono le dimesioni lungo gli assi x ed y dei trigger in alto ed in basso,
-distanza_t è la distanza tra i due trigger,
-tup_scint è la distanza tra il trigger superiore e lo scintillatore,
-geometric eff è il rapporto tra l'area del rivelatore e la faccia libera del cristallo
-'''
+#Parametri del sistema, lunghezze in m, U/R = faccia superiore (cristallo verticale) o destra (cristallo orizzontale), D/L = faccia inferiore o sinistra
 
-tup_x = 0.049
-tup_y = 0.049
-tdown_x = 0.049
-tdown_y = 0.049
-distanza_t = 0.12
-tup_scint = 0.025
-geometric_eff = 0.0625*0.5
+dim_x_trigger_superiore = 0.049
+dim_y_trigger_superiore = 0.049
+dim_x_trigger_inferiore = 0.049
+dim_y_trigger_inferiore = 0.049
+distanza_tra_trigger = 0.12
+distanza_trigger_superiore_scintillatore = 0.025
+rapporto_area_sipm/faccia_U/R = 0.0625
+rapporto_area_sipm/faccia_D/L = 0.0625
+indice_rifrazione_ambiente = 1.0003 #ex. aria
+verticale = True
 
 
 # Cristallo: dim x, y e z sono le dimensioni del cristallo in m
-dim_z = 0.05
-dim_y = 0.012
-dim_x = 0.012
+altezza = 0.05
+larghezza = 0.012 # asse y
+lunghezza = 0.012 # asse x
 
 
 #Fine edit
 class System:
-    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint, geometric_eff):
+    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, dist_t, tup_scint, g_effA, g_effB, rifrazione, verticale):
         self.name = name
         self.tup_x = tup_x
         self.tup_y = tup_y
         self.tdown_x = tdown_x
         self.tdown_y = tdown_y
-        self.dt = distanza_t
+        self.dt = dist_t
         self.tup_scint = tup_scint
-        self.geometric_eff = geometric_eff
+        self.g_effA = g_effA
+        self.g_effB = g_effB
+        self.rifrazione = rifrazione
+        self.v = verticale
 
 class Scintillatore:
     def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss):
@@ -40,7 +40,7 @@ class Scintillatore:
         self.y = dim_y
         self.x = dim_x
         self.density = density
-        self.light_yield = light_yield
+        self.ly = light_yield
         self.rifrazione = rifrazione
         self.radlen = radlen
         self.dedx = ene_loss
@@ -108,7 +108,20 @@ eff_CB = trapz(tot,x)
 
 
 #Sistemi
-sistema1=System('sys', tup_x, tup_y, tdown_x, tdown_y, distanza_t, tup_scint, geometric_eff, lambda_min, lambda_max)
+sysV=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, 0.0625, 0.0625, 1.0003, True)
+sysO=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, 0.0625, 0.0625, 1.0003, True)
+
+dim_x_trigger_superiore = 0.049
+dim_y_trigger_superiore = 0.049
+dim_x_trigger_inferiore = 0.049
+dim_y_trigger_inferiore = 0.049
+distanza_tra_trigger = 0.12
+distanza_trigger_superiore_scintillatore = 0.025
+rapporto_area_sipm/faccia_U/R = 0.0625
+rapporto_area_sipm/faccia_D/L = 0.0625
+indice_rifrazione_ambiente = 1.0003 #ex. aria
+verticale = True
+
 
 #Scintillatori, densità in Kg/m^3, light yield in #/MeV, radlen in m, ene_loss in MeV / (kg/ m^2)
 BGO=Scintillatore('BGO', dim_z, dim_y, dim_x, density=7130, light_yield=8200, rifrazione = 2.15, radlen = 0.011, ene_loss=0.1272)

@@ -1,24 +1,3 @@
-#Parametri del sistema, lunghezze in m, U/R = faccia superiore (cristallo verticale) o destra (cristallo orizzontale), D/L = faccia inferiore o sinistra
-
-dim_x_trigger_superiore = 0.049
-dim_y_trigger_superiore = 0.049
-dim_x_trigger_inferiore = 0.049
-dim_y_trigger_inferiore = 0.049
-distanza_tra_trigger = 0.12
-distanza_trigger_superiore_scintillatore = 0.025
-rapporto_area_sipm/faccia_U/R = 0.0625
-rapporto_area_sipm/faccia_D/L = 0.0625
-indice_rifrazione_ambiente = 1.0003 #ex. aria
-verticale = True
-
-
-# Cristallo: dim x, y e z sono le dimensioni del cristallo in m
-altezza = 0.05
-larghezza = 0.012 # asse y
-lunghezza = 0.012 # asse x
-
-
-#Fine edit
 class System:
     def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, dist_t, tup_scint, g_effA, g_effB, rifrazione, verticale):
         self.name = name
@@ -34,7 +13,7 @@ class System:
         self.v = verticale
 
 class Scintillatore:
-    def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss):
+    def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss, emissione, trasmittanza):
         self.name = name
         self.z = dim_z
         self.y = dim_y
@@ -44,6 +23,8 @@ class Scintillatore:
         self.rifrazione = rifrazione
         self.radlen = radlen
         self.dedx = ene_loss
+        self.e = emissione
+        self.t = trasmittanza
 
 
 # Dati presi in esperimento per avere funzione di efficienza in lambda
@@ -109,20 +90,13 @@ eff_CB = trapz(tot,x)
 
 #Sistemi
 sysV=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, 0.0625, 0.0625, 1.0003, True)
-sysO=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, 0.0625, 0.0625, 1.0003, True)
-
-dim_x_trigger_superiore = 0.049
-dim_y_trigger_superiore = 0.049
-dim_x_trigger_inferiore = 0.049
-dim_y_trigger_inferiore = 0.049
-distanza_tra_trigger = 0.12
-distanza_trigger_superiore_scintillatore = 0.025
-rapporto_area_sipm/faccia_U/R = 0.0625
-rapporto_area_sipm/faccia_D/L = 0.0625
-indice_rifrazione_ambiente = 1.0003 #ex. aria
-verticale = True
+sysO=System('demoorizzontale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.085, 0.0625, 0.0625, 1.0003, False)
 
 
-#Scintillatori, densità in Kg/m^3, light yield in #/MeV, radlen in m, ene_loss in MeV / (kg/ m^2)
-BGO=Scintillatore('BGO', dim_z, dim_y, dim_x, density=7130, light_yield=8200, rifrazione = 2.15, radlen = 0.011, ene_loss=0.1272)
-PWO=Scintillatore('PWO', dim_z, dim_y, dim_x, density=8280, light_yield=190, rifrazione = 2.16, radlen = 0.009, ene_loss=0.1225)
+#Scintillatori, dim x, y e z sono le dimensioni del cristallo in m, densità in Kg/m^3, light yield in #/MeV, radlen in m, ene_loss in MeV / (kg/ m^2)
+dim_z = 0.05
+dim_y = 0.012
+dim_x = 0.012
+
+BGO=Scintillatore('BGO', dim_z, dim_y, dim_x, 7130, 8200, 2.15, 0.011, 0.1272, 'emissione/BGO.csv', 'trasmittanza/BGO.asc')
+PWO=Scintillatore('PWO', dim_z, dim_y, dim_x, 8280, 190, 2.16, 0.009, 0.1225, 'emissione/PWO.csv', 'trasmittanza/PWO.asc')

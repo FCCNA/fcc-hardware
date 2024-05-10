@@ -1,28 +1,42 @@
 class System:
-    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, dist_t, tup_scint, g_effA, g_effB, rifrazione, verticale):
+    def __init__(self, name, tup_x, tup_y, tdown_x, tdown_y, dist_t, tup_scint, verticale, rifrazione, g_effA, g_effB, sipmA, sipmB):
         self.name = name
+        
         self.tup_x = tup_x
         self.tup_y = tup_y
         self.tdown_x = tdown_x
         self.tdown_y = tdown_y
         self.dt = dist_t
+        
         self.tup_scint = tup_scint
+        self.v = verticale
+
+        self.rifrazione = rifrazione
+        
         self.g_effA = g_effA
         self.g_effB = g_effB
-        self.rifrazione = rifrazione
-        self.v = verticale
+        self.sipmA = sipmA
+        self.sipmB = sipmB
+        
+        self.fA = filtroA
+        self.fB = filtroB
+        
+        
 
 class Scintillatore:
     def __init__(self, name, dim_z, dim_y, dim_x, density, light_yield, rifrazione, radlen, ene_loss, emissione, trasmittanza):
         self.name = name
+        
         self.z = dim_z
         self.y = dim_y
         self.x = dim_x
+        
         self.density = density
         self.ly = light_yield
         self.rifrazione = rifrazione
         self.radlen = radlen
         self.dedx = ene_loss
+        
         self.e = emissione
         self.t = trasmittanza
 
@@ -89,8 +103,8 @@ eff_CB = trapz(tot,x)
 
 
 #Sistemi
-sysV=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, 0.0625, 0.0625, 1.0003, True)
-sysO=System('demoorizzontale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.085, 0.0625, 0.0625, 1.0003, False)
+sysV=System('demoverticale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.025, True, 1.0003, 0.0625, 0.0625, 'sipm/S14460_pde.csv', 'sipm/S14460_pde.csv', 'filtri/BGOug1.asc')
+sysO=System('demoorizzontale', 0.049, 0.049, 0.049, 0.049, 0.12, 0.085, True, 1.0003, 0.0625, 0.0625, 'sipm/S14460_pde.csv', 'sipm/S14460_pde.csv', 'filtri/BGOug1.asc')
 
 
 #Scintillatori, dim x, y e z sono le dimensioni del cristallo in m, densità in Kg/m^3, light yield in #/MeV, radlen in m, ene_loss in MeV / (kg/ m^2)

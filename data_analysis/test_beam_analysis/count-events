@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+# -*- mode: Python; coding: utf-8 -*-
+
+"""
+Script to calibrate dhe SiPM during the Test Beam
+"""
+
+__author__ = "Giovanni Gaudino"
+__email__ = "gaudino@na.infn.it"
+
+
+from termcolor import colored
+import argparse
+import sys
+sys.path.append("/eos/user/g/ggaudino/tb_analysis/midas/python")
+import midas.file_reader
+import numpy as np
+import os
+import datetime
+
+def parse_run_sequence(run_sequence):
+    """
+    Parse the run sequence argument.
+    
+    Accepts either a list of numbers or a range in the form of 'start:end'.
+    """
+    runs = []
+    for item in run_sequence:
+        if ':' in item:
+            start, end = map(int, item.split(':'))
+            runs.extend(range(start, end + 1))
+        else:
+            runs.append(int(item))
+    return runs
+
+def argparser():
+    """
+    Parse options as command-line arguments.
+    """
+
+    # Re-use the base argument parser, and add options on top.
+
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter, add_help=True)
+
+    parser.add_argument("--runs",
+                        nargs='+',
+                        type=str,
+                        required=True,
+                        help="List of run numbers or ranges in the form start:end")
+
+    #tools.check_options_validity(parser)
+
+    return parser
+
+
+def get_file_size_in_mb(file_path):
+    file_size_bytes = os.path.getsize(file_path)
+    file_size_mb = file_size_bytes / (1024 * 1024)
+    return file_size_mb
+
+
+def parse_time(time_str):
+    return datetime.datetime.strptime(time_str, '%a %b %d %H:%M:%S %Y')
+
+
+if __name__ == "__main__":
+    
+    args = argparser().parse_args()
+    run_numbers = parse_run_sequence(args.runs)
+
+    print(f'List of runs: {run_numbers}')
+
+
+    
+    # open file
+     # Dark count triggerando sul broadcom
+    #run_number = "21" # Dark count triggerando sul hpk 
+    #if args.run_number == 20:
+    #    print(colored(f"You are analysing a run of Dark count with the trigger on the broadcom!", "green"))
+    #if args.run_number == 21:
+    #    print(colored(f"You are analysing a run of Dark count with the trigger on the hpk!", "green"))
+    total_events = 0
+    total_size = 0
+    for run_number in run_numbers:
+        file_name = f"run{run_number:05d}.mid.gz"
+        file_path = './runs/'
+        constant_frac = []
+        if not os.path.isfile(file_path + file_name):
+            print(colored(f"No Run {run_number}","red"))
+            continue
+        mfile = midas.file_reader.MidasFile(file_path + file_name, use_numpy = True)
+
+        print(colored(f'*******INFORMATION OF THE RUN {run_number}*******', "red"))
+        with open('runs/runlog.log', 'r') as file:
+            lines = file.readlines()
+
+        run_description = ""
+        start_time = None
+        end_time = None
+        for line in lines:
+            parts = line.split('\t')
+            if parts and parts[0].isdigit() and int(parts[0]) == run_number:
+                start_time_str = parts[1].strip()
+                run_description = parts[2].strip()
+                end_time_str = parts[3].strip()
+                start_time = parse_time(start_time_str)
+                end_time = parse_time(end_time_str)
+                break
+
+        # Calcola la durata
+        duration = end_time - start_time if start_time and end_time else None
+
+        # Stampa i risultati
+        print(colored(f"Run Description: {run_description}", "green"))
+        print(colored(f"Start Time: {start_time}", "green"))
+        print(colored(f"End Time: {end_time}", "green"))
+        print(colored(f"Duration: {duration}", "green"))
+
+        mfile.jump_to_start()
+        total_s = 0
+        for event in mfile:
+            total_s = total_s+1
+
+        total_events = total_s + total_events
+        size = get_file_size_in_mb(file_path + file_name)
+        total_size = total_size + size
+        
+        print(colored(f'** The run {run_number} has {total_s} events**', "blue"))
+        print(colored(f'** The run {run_number} is {size:.2f} MB**', "blue"))
+        
+    print(colored(f'The total event number of {run_numbers} is {total_events}', "red"))
+    print(colored(f'The total size of {run_numbers} is {total_size:.2f} MB', "red"))
+        

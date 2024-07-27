@@ -83,7 +83,7 @@ if __name__ == "__main__":
     total_size = 0
     for run_number in run_numbers:
         file_name = f"run{run_number:05d}.mid.gz"
-        file_path = './runs/'
+        file_path = '/eos/home-g/ggaudino/tb_analysis/runs/'
         constant_frac = []
         if not os.path.isfile(file_path + file_name):
             print(colored(f"No Run {run_number}","red"))

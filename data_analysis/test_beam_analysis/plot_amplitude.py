@@ -1,4 +1,4 @@
-import library as lib
+from __init__ import *
 
 __author__ = "Giovanni Gaudino"
 __email__ = "gaudino@na.infn.it"
@@ -104,5 +104,5 @@ if __name__ == "__main__":
         plt.xlabel('Amplitude [mV]')
         plt.ylabel('Event Count')
         plt.tight_layout()
-        plt.savefig(f'AmplitudeSpectrumrun{run_number}_channel{channel}.png', dpi = 300)
+        plt.savefig(f'figures/AmplitudeSpectrum_run{run_number}_channel{channel}.png', dpi = 300)
         print(colored(f"Amplitude of {run_number} - Channel {channel} Saved","green"))

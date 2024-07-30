@@ -39,6 +39,22 @@ def sum_of_gaussians(x, *params):
 def parse_time(time_str):
     return datetime.datetime.strptime(time_str, '%a %b %d %H:%M:%S %Y')
 
+def sum_waveform(waveform, channel, maximum = False):
+    wf = np.zeros(len(waveform[0][channel]))
+    index = 0
+    print(len(waveform))
+    for i in range(len(waveform) - 1):
+        if maximum:
+            if np.max(waveform[i][channel]) < 80 and np.max(waveform[i][channel]) > 40:
+                index += 1
+                wf += waveform[i][channel]
+        else: 
+            index += 1
+            wf += waveform[i][channel]
+    wf = wf/index
+    return wf
+
+
 def read_waveform(run_index, save_candidate, not_all_events = False, max_event = 1000):
     
     """
@@ -86,7 +102,7 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
             break
         if event.header.event_id != 1:
             continue
-
+        new_data = {'__event__': event.header.serial_number}
         for bank_name, bank in event.banks.items():
             if len(bank.data):
                 channel = np.where(Channel_Enabled)[0][int(bank_name[-1])]
@@ -94,19 +110,18 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
                 wf = 1000 * (((bank.data - (bit / 2)) * scale[channel] * 10 / bit) - (position[channel] * scale[channel]))
 
                 piedistallo = np.mean(wf[:15])
-                wf -= piedistallo
+                wf = wf - piedistallo
 
-                filtered10_wf = filter_wf(wf, 10)
+                #filtered10_wf = filter_wf(wf, 10)
                 media = media_mobile(wf, 20)
-                new_data = {'__event__': event.header.serial_number}
 
                 times = np.arange(0, 1 / SARA * len(wf), 1 / SARA)
                 times -= (1 / SARA * len(wf)) * HPOS / 100
                 times *= 1.e9
 
                 ampl = np.max(np.abs(wf))
-                ampl_10 = np.argmax(filtered10_wf)
-                ampl_media = np.max(np.abs(media))
+                #ampl_10 = np.argmax(filtered10_wf)
+                ampl_media = np.max(media)
 
                 new_data.update({
                     f'amplitude_channel{ch_osci}': ampl,
@@ -125,22 +140,26 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
                             f'amplitude_media_cand_channel{ch_osci}': media[peaks[j]]
                         })
                         new_data_list.append(candidate)
+                        '''
                 else:
                     new_data.update({
                         f'amplitude_10_channel{ch_osci}': filtered10_wf[ampl_10],
                     })
-                    new_data_list.append(new_data)
+                        '''
+                    
 
                 if event.header.serial_number not in waveform:
                     waveform[event.header.serial_number] = {}
 
                 waveform[event.header.serial_number][ch_osci] = wf
                 waveform[event.header.serial_number][f'{ch_osci}media'] = media
-
         if progress_bar:
             progress_bar.update(1)
+
+        new_data_list.append(new_data)
+        waveform[0]['times'] = times
     if progress_bar:
         progress_bar.close()
-
     info = pd.DataFrame(new_data_list)
     return waveform, info
+

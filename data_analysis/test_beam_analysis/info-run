@@ -91,7 +91,7 @@ if __name__ == "__main__":
         mfile = midas.file_reader.MidasFile(file_path + file_name, use_numpy = True)
 
         print(colored(f'*******INFORMATION OF THE RUN {run_number}*******', "red"))
-        with open('runs/runlog.log', 'r') as file:
+        with open(f'{file_path}/runlog.log', 'r') as file:
             lines = file.readlines()
 
         run_description = ""

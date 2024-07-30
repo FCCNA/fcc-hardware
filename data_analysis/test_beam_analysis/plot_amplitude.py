@@ -93,7 +93,7 @@ if __name__ == "__main__":
     wf = {}
     df = {}
     for run_number in run_numbers:
-        wf[run_number], df[run_number] = lib.read_waveform(run_number, save_cand, not_all_events, number_events)
+        wf[run_number], df[run_number] = read_waveform(run_number, save_cand, not_all_events, number_events)
 
     for channel in channels:
         plt.subplot()

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <title>Run Transition</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Transition')">
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+
+   <table class="mtable" id="xstripeList">
+      <tr>
+         <th colspan="2" class="mtableheader">Run Status</th>
+      </tr>
+      <tr>
+         <td id="run_info" class="mred mbox" style="padding:7px">
+            Run
+            <span id="run_number">run_number</span>
+            <span id="run_state">run_state</span>
+         </td>
+         <td>
+            <input class="mbutton" id="startButton" type=button value=Start onClick="mhttpd_start_run();">
+            <input class="mbutton" id="stopButton" type=button value=Stop onClick="mhttpd_stop_run();">
+            <input class="mbutton" id="pauseButton" type=button value=Pause onClick="mhttpd_pause_run();">
+            <input class="mbutton" id="resumeButton" type=button value=Resume onClick="mhttpd_resume_run();">
+            <input class="mbutton" id="cancelButton" type=button value="Cancel Transition" onClick="mhttpd_cancel_transition();">
+         </td>
+      </tr>
+      <tr>
+         <td colspan="2">
+            <span class="mfont" id="tr_status">tr_status</span>
+         </td>
+      </tr>
+   </table>
+
+
+   <table class="mtable" id="stripeList">
+      <tr>
+         <th colspan="5" class="mtableheader">Run Transition</th>
+      </tr>
+      <tr>
+         <td colspan="5">
+           Last transition: <span class="mtext" id="transition">transition</span>,
+           Status: <span class="mtext"><span id="status">status</span> (<span id="errorstr">errorstr</span>)</span>,
+           Time: <span class="mtext" id="time">time</span>
+         </td>
+      </tr>
+      <tr class="mtabletitle">
+         <th style="padding:7px">Client</th>
+         <th style="padding:7px">Sequence</th>
+         <th style="padding:7px">Time<br>wait,connect,rpc,(total)</th>
+         <th style="padding:7px">Status</th>
+         <th style="text-align:left;padding:7px">Error message</th>
+      </tr>
+   </table>
+</div>
+
+<script>
+   var update_timer_id;
+
+   var transition_text = {
+      1: "Starting run...",
+      2: "Stopping run...",
+      4: "Pausing run...",
+      8: "Resuming run...",
+      16: "Start abort",
+      4096: "Deferred..."
+   };
+   var transition_final = {
+      1: "Running",
+      2: "Stopped",
+      4: "Paused",
+      8: "Running",
+      16: "Start aborted, stopped",
+      4096: "Deferred..."
+   };
+   var transition_fake_runstate = {
+      1: STATE_RUNNING,
+      2: STATE_STOPPED,
+      4: STATE_PAUSED,
+      8: STATE_RUNNING,
+      16: STATE_STOPPED,
+      4096: "Deferred..."
+   };
+
+   function create_client(id) {
+      var table = document.getElementById("stripeList");
+
+      if (!table)
+         return; // no table?!?
+
+      var tr = document.createElement("tr");
+      tr.id = id;
+      tr.className = "mtable";
+      
+      var td;
+      
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = "name";
+      tr.appendChild(td);
+      
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = "seqno";
+      tr.appendChild(td);
+      
+      td = document.createElement("td");
+      td.style = "text-align:left;font-family: monospace;";
+      //td.align = "center";
+      td.innerHTML = "time";
+      tr.appendChild(td);
+      
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = "status";
+      tr.appendChild(td);
+      
+      td = document.createElement("td");
+      td.style = "text-align:left";
+      td.align = "center";
+      td.innerHTML = "errorstr";
+      tr.appendChild(td);
+      
+      table.appendChild(tr);
+      
+      return tr;
+   }
+
+   function create_separator(id, text) {
+      var table = document.getElementById("stripeList");
+
+      if (!table)
+         return; // no table?!?
+      
+      var tr = document.createElement("tr");
+      tr.id = id;
+      tr.className = "mtable";
+      
+      var td;
+      
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = text;
+      td.colSpan = 5;
+      tr.appendChild(td);
+      
+      table.appendChild(tr);
+
+      return tr;
+   }
+
+   function set_text(id, text) {
+      var e = document.getElementById(id);
+      if (e) {
+         e.innerHTML = text;
+         if (id === "tr_status")
+            e.parentElement.style.display = text === "" ? "none" : "";
+      }
+   }
+
+   function adjust_colors(runstate) {
+      if (runstate == STATE_RUNNING) {
+         document.getElementById("run_info").className = "mgreen mbox";
+      } else if (runstate == STATE_PAUSED) {
+         document.getElementById("run_info").className = "myellow mbox";
+      } else if (runstate == STATE_STOPPED) {
+         document.getElementById("run_info").className = "mred mbox";
+      } else {
+         document.getElementById("run_info").className = "mgreen mbox";
+      }
+   }
+
+   function adjust_buttons(runstate) {
+      if (runstate == STATE_RUNNING) {
+         document.getElementById("startButton").disabled = true;
+         document.getElementById("stopButton").disabled = false;
+         document.getElementById("pauseButton").disabled = false;
+         document.getElementById("resumeButton").disabled = true;
+         //document.getElementById("cancelButton").disabled = true;
+      } else if (runstate == STATE_PAUSED) {
+         document.getElementById("startButton").disabled = true;
+         document.getElementById("stopButton").disabled = false;
+         document.getElementById("pauseButton").disabled = true;
+         document.getElementById("resumeButton").disabled = false;
+         //document.getElementById("cancelButton").disabled = true;
+      } else if (runstate == STATE_STOPPED) {
+         document.getElementById("startButton").disabled = false;
+         document.getElementById("stopButton").disabled = true;
+         document.getElementById("pauseButton").disabled = true;
+         document.getElementById("resumeButton").disabled = true;
+         //document.getElementById("cancelButton").disabled = true;
+      } else {
+         document.getElementById("startButton").disabled = true;
+         document.getElementById("stopButton").disabled = true;
+         document.getElementById("pauseButton").disabled = true;
+         document.getElementById("resumeButton").disabled = true;
+         //document.getElementById("cancelButton").disabled = false;
+      }
+   }
+
+   function time2sec(time) {
+      let v = Math.round(time / 100);
+      if (v == 0)
+         return "0";
+      return v / 10.0 + "s";
+   }
+
+   function time2dot(time, dot) {
+      let v = Math.ceil(time / 1000);
+      if (v == 0)
+         return dot;
+      //return "["+time+"/"+v+"]"+dot.repeat(v);
+      return dot.repeat(v);
+   }
+
+   function time2dot2(str, time0, time1, time2, dot) {
+      let v1 = Math.ceil((time1-time0)/1000);
+      let v2 = Math.ceil((time2-time0)/1000);
+      let v0 = str.length;
+      return str + dot.repeat(v2-v0);
+
+      let time = time2-time1;
+      if (time < 0)
+         return str;
+      let v = Math.ceil(time / 1000);
+      if (v == 0)
+         return str + dot;
+      //return "["+time+"/"+v+"]"+dot.repeat(v);
+      return str + dot.repeat(v);
+   }
+
+   function tr_name(tr) {
+      var v = transition_names[tr];
+      if (v)
+         return v;
+      return "TR_" + tr;
+   }
+
+   function show_client(id, client, millitime) {
+      //console.log(name + " : " + JSON.stringify(client));
+      //console.log(name);
+      
+      var e = document.getElementById(id);
+      if (!e) e = create_client(id);
+      
+      //continue;
+      
+      if (!e)
+         return;
+      
+      //console.log(name + " | " + name + " | " + e);
+      
+      var time_string = "";
+      
+      if (client.end_time != 0) {
+         // this client is done
+         if (client.connect_start_time == 0) {
+            client.connect_start_time = client.init_time;
+         }
+         if (client.connect_end_time == 0) {
+            client.connect_end_time = client.connect_start_time;
+         }
+         if (client.rpc_start_time == 0) {
+            client.rpc_start_time = client.connect_end_time;
+         }
+         if (client.rpc_end_time == 0) {
+            client.rpc_end_time = client.rpc_start_time;
+         }
+
+         time_string = time2dot2(time_string, client.init_time, client.init_time, client.connect_start_time, "w");
+         time_string = time2dot2(time_string, client.init_time, client.connect_start_time, client.connect_end_time, "c");
+         time_string = time2dot2(time_string, client.init_time, client.connect_end_time, client.rpc_end_time, "r");
+         time_string = time2dot2(time_string, client.init_time, client.rpc_end_time, client.end_time, ".");
+         time_string += "|";
+         let tr_time = client.end_time - client.connect_start_time;
+         time_string += " (" + time2sec(tr_time) + ")";
+      } else {
+         // this client is not done yet...
+         if (client.connect_start_time == 0) {
+            // waiting...
+            time_string += "w, waiting " + time2sec(millitime - client.init_time);
+         } else {
+            // connect started, maybe finished
+            time_string = time2dot2(time_string, client.init_time, client.init_time, client.connect_start_time, "w");
+            if (client.connect_end_time == 0) {
+               // connecting...
+               time_string += "c, connecting " + time2sec(millitime - client.connect_start_time);
+               time_string += ", timeout " + time2sec(client.connect_timeout);
+            } else {
+               // connected or connect failed
+               time_string = time2dot2(time_string, client.init_time, client.connect_start_time, client.connect_end_time, "c");
+               if (client.rpc_start_time != 0) {
+                  // rpc started and maybe finished
+                  if (client.rpc_end_time == 0) {
+                     // rpc in progress...
+                     time_string += "r, rpc " + time2sec(millitime - client.rpc_start_time);
+                     time_string += ", timeout " + time2sec(client.rpc_timeout);
+                  } else {
+                     // rpc finished
+                     time_string = time2dot2(time_string, client.init_time, client.rpc_end_time, client.rpc_start_time, "r");
+                  }
+               }
+            }
+         }
+      }
+      
+      e.childNodes[0].innerHTML = client.client_name;
+      e.childNodes[1].innerHTML = client.sequence_number;
+      if (client.status == 0) {
+         e.childNodes[2].innerHTML = time_string;
+         e.childNodes[3].innerHTML = "Waiting...";
+         e.childNodes[3].className = "";
+      } else if (client.status == 1) {
+         e.childNodes[2].innerHTML = time_string;
+         e.childNodes[3].innerHTML = "Success";
+         e.childNodes[3].className = "mgreen mbox";
+      } else if (client.status == 605) {
+         e.childNodes[2].innerHTML = time_string;
+         e.childNodes[3].innerHTML = "Error";
+         e.childNodes[3].className = "mred mbox";
+      } else if (client.status == -1) {
+         e.childNodes[2].innerHTML = "Skipped";
+         e.childNodes[3].innerHTML = "Skipped";
+         e.childNodes[3].className = "mred mbox";
+      } else {
+         e.childNodes[2].innerHTML = time_string;
+         e.childNodes[3].innerHTML = client.status;
+         e.childNodes[3].className = "mred mbox";
+      }
+      
+      if (!client.error) {
+         e.childNodes[4].innerHTML = "";
+      } else if (client.error.length > 0) {
+         e.childNodes[4].innerHTML = client.error;
+      } else if (client.waiting_for_client.length > 0) {
+         e.childNodes[4].innerHTML = "Waiting for " + client.waiting_for_client;
+      } else {
+         e.childNodes[4].innerHTML = "";
+      }
+   }
+
+   function should_return() {
+      let ret = mhttpd_getParameterByName("Return");
+      if (ret) {
+         if (ret.toLowerCase() === "custom") {
+             let page = mhttpd_getParameterByName("page");
+	     if (page) {
+                return true;
+	     }
+         } else {
+            return true;
+	 }
+      }
+      return false;
+   }
+
+   function do_return() {
+      let ret = mhttpd_getParameterByName("Return");
+      if (ret) {
+         if (ret.toLowerCase() === "custom") {
+             let page = mhttpd_getParameterByName("page");
+	     if (page) {
+                mhttpd_goto_page(ret, "&page=" + page);
+	     }
+	 } else {
+            mhttpd_goto_page(ret);
+	 }
+      }
+   }
+
+   let displayed_transition = 0;
+
+   function callback(rpc_batch) {
+      //console.log(JSON.stringify(rpc.result));
+
+      var rpc_db_get_values = rpc_batch[0];
+      var millitime         = rpc_batch[1].result;
+
+      var runinfo = rpc_db_get_values.result.data[0];
+      var odb     = rpc_db_get_values.result.data[1];
+
+      //console.log(JSON.stringify(millitime));
+
+      //console.log("odb = " + odb);
+
+      if (!odb) {
+         adjust_buttons(runinfo.state);
+         adjust_colors(runinfo.state);
+         set_text("run_number", runinfo["run number"]);
+         set_text("run_state", run_state_names[runinfo.state]);
+         set_text("tr_status", "(No transition status in ODB. It will become available once you start a run)");
+         set_text("transition", "(transition not available)");
+         set_text("status", "(status not available)");
+         set_text("errorstr", "(error string not available)");
+         set_text("time", "(time not available)");
+         return;
+      }
+
+      //console.log("here: " + JSON.stringify(rpc_db_get_values.result.data[0]));
+      //console.log("here: " + JSON.stringify(odb));
+
+      //console.log("old transition: " + displayed_transition + " new transition: " + odb.transition);
+      if (displayed_transition != 0) {
+         // there is no code here to clear the table of clients for a new transition,
+         // so we reload the page instead...
+         if (odb.transition != displayed_transition) {
+            window.location.reload();
+         }
+      } else {
+         displayed_transition = odb.transition;
+      }
+
+      set_text("run_number", odb.run_number + "/" + runinfo["run number"]);
+      
+      if (odb.end_time == 0) {
+         set_text("run_state", run_state_names[runinfo.state] + "/" + tr_name(odb.transition));
+         adjust_buttons(0);
+         adjust_colors(0);
+      } else if (runinfo.state) {
+         adjust_buttons(runinfo.state);
+         adjust_colors(runinfo.state);
+         set_text("run_state", run_state_names[runinfo.state]);
+      } else {
+         var fake_runstate = transition_fake_runstate[odb.transition];
+         adjust_buttons(fake_runstate);
+         adjust_colors(fake_runstate);
+         set_text("run_state", run_state_names[fake_runstate]);
+      }
+      set_text("transition", tr_name(odb.transition));
+      set_text("status", odb.status);
+      set_text("errorstr", odb.error);
+
+      var tr_time_text = "";
+
+      if (odb.end_time == 0) {
+         var tr_time = millitime - odb.start_time;
+         tr_time_text = time2sec(tr_time);
+         set_text("time", tr_time_text);
+      } else {
+         var tr_time = odb.end_time - odb.start_time;
+         tr_time_text = time2sec(tr_time);
+         set_text("time", tr_time_text);
+      }
+
+      var in_progress = false;
+      if (runinfo["transition in progress"] != 0)
+         in_progress = true;
+      if (runinfo["requested transition"] != 0)
+         in_progress = true;
+      
+      if (!in_progress) {
+         // transition is completed
+         document.getElementById("cancelButton").disabled = true;
+         set_text("tr_status", "");
+         //console.log("odb.status is " + odb.status); 
+         if (odb.status == 1) {
+            // if transition failed, stay on the transition page!
+            if (should_return()) {
+               // disable all buttons and wait for a few seconds and return to the page we came from
+               adjust_buttons(-1);
+               setTimeout('do_return()', 2000);
+	    }
+	 }
+      } else {
+         // transition still in progress
+         document.getElementById("cancelButton").disabled = false;
+         set_text("tr_status", "Transition \"" + tr_name(odb.transition) + "\" in progress, elapsed time: " + tr_time_text);
+      }
+
+      if (odb.deferred) {
+         var id = "DEFERRED";
+         var e = document.getElementById(id);
+         if (!e) e = create_separator(id, "<b>Transition deferred by client \"" + odb.deferred + "\"</b>");
+      }
+
+      for (var name in odb.clients) {
+         var client = odb.clients[name];
+         if (name.indexOf("/") > 0)
+            continue;
+         show_client("client " + name, client, millitime);
+      }
+
+      if (odb.tr_startabort) {
+         var id = "TR_STARTABORT";
+         var e = document.getElementById(id);
+         if (!e) e = create_separator(id, "<b>TR_STARTABORT transition: cleanup after failure to start a run</b>");
+
+         for (var name in odb.tr_startabort) {
+            var client = odb.tr_startabort[name];
+            if (name.indexOf("/") > 0)
+               continue;
+            show_client("STARTABORT " + name, client, millitime);
+         }
+      }
+   }
+
+   function update() {
+      var req = new Array;
+      req.push(mjsonrpc_make_request("db_get_values", {"paths": ["/runinfo","/System/transition"]}));
+      req.push(mjsonrpc_make_request("ss_millitime"));
+      mjsonrpc_send_request(req).then(function (rpc) {
+         callback(rpc);
+         start_update_timer();
+      }).catch(function (error) {
+         mjsonrpc_error_alert(error, function() {
+            start_update_timer();
+         });
+      });
+   }
+
+   function start_update_timer() {
+      clearTimeout(update_timer_id);
+      var update_period = 1000;
+      //console.log("start update timer!");
+      update_timer_id = setTimeout('update()', update_period);
+   }
+
+   update();
+</script>
+</body>
+</html>

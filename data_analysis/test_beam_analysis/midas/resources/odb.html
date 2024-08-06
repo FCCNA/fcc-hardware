@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Full ODB editor as pure custom page using odbbrowser.js -->
+
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css" type="text/css">
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <script src="filesrw.js"></script>
+   <script src="odbbrowser.js"></script>
+   <title>ODB</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('ODB'); odb_browser('odb')">
+
+   <div id="mheader"></div>
+   <div id="msidenav"></div>
+
+   <div id="mmain">
+      <div id="odb"></div>
+   </div>
+
+</body>
+</html>

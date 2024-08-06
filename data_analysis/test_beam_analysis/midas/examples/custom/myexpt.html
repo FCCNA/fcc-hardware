@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="midas.css">
+	<script src="controls.js"></script>
+	<script src="midas.js"></script>
+	<script src="mhttpd.js"></script>
+	<title>MyExperiment Status Page</title>
+</head>
+<style>
+	td { padding: 10px; }
+</style>
+<body class="mcss" onload="mhttpd_init('MyPage');">
+<script>
+function stateChange(state) {
+	let d = document.getElementById('runNumber');
+	if (state === 3)
+	   d.className = "mgreen mbox";
+	else if (state === 2)
+		d.className = "myellow mbox";
+	else
+		d.className = "mred mbox";
+}
+</script>
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+	<table class="mtable">
+		<tr>
+			<th colspan="2" class="mtableheader">MyExperiment Status</th>
+		</tr>
+		<tr>
+			<td colspan="2" style="text-align: center">
+				<button class="mbutton" onclick="mhttpd_start_run('&Return=custom&page=MyPage')">Start run</button>
+				<button class="mbutton" onclick="mhttpd_stop_run('&Return=custom&page=MyPage')">Stop run</button>
+			</td>
+		</tr>
+		<tr>
+			<span class="modb" data-odb-path="/Runinfo/State" onchange="stateChange(this.value);"></span>
+			<td id="runNumber" class="mred mbox">Current run number: <span class="modbvalue" data-odb-path="/Runinfo/Run number"></span></td>
+			<td>Run started: <span class="modbvalue" data-odb-path="/Runinfo/Start time"></span></td>
+		</tr>
+		<tr>
+			<th colspan="2" class="mtableheader">Trigger Events</th>
+		</tr>
+		<tr>
+			<td>Events sent: <span class="modbvalue" data-odb-path="/Equipment/Trigger/Statistics/Events sent"></span></td>
+			<td>Event rate [Hz]: <span class="modbvalue" data-odb-path="/Equipment/Trigger/Statistics/Events per sec." data-format="f1"></span></td>
+		</tr>
+	</table>
+</div>
+
+</body>
+</html>

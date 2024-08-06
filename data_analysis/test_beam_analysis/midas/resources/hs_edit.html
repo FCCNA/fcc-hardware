@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="midas.css">
+    <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+    <script src="midas.js"></script>
+    <script src="mhttpd.js"></script>
+    <script src="controls.js"></script>
+    <title>History</title>
+  </head>
+  
+  <body class="mcss" onload="mhttpd_init('History')">
+    
+    <!-- header and side navigation will be filled in mhttpd_start -->
+    <div id="mheader"></div>
+    <div id="msidenav"></div>
+    
+    <div id="mmain">
+      <div>
+	<table class="mtable subStatusTable" id="channels">
+	  <tr>
+            <td colspan=5 class="mtableheader subStatusTitle">History settings</td>
+	  </tr>
+	  <tr>
+	    <td>
+	      Default channel:
+	      <span id="default_channel">default_channel</span>
+	    </td>
+	    <td>
+	      Active channels:
+	      <span id="active_channels">active_channels</span>
+	    </td>
+	    <td>
+	      All channels:
+	      <span id="all_channels">all_channels</span>
+	    </td>
+	    <td>
+	      <label for="channel_select">Selected channel:</label>
+              <select id="channel_select">
+		<option value="">First active channel</option>
+              </select>
+	    </td>
+	    <td>
+	      <input type=button class=mbutton value="Change default history channel" onclick="save_selected_channel()">
+	    </td>
+	  </tr>
+	</table>
+      </div>
+      <div>
+	<table class="mtable">
+	  <tr>
+	    <th class="mtableheader">History Panel "<span id=group>group</span>" / "<span id=panel>panel</span>"</th>
+	  </tr>
+	  <tr>
+	    <td>
+              <input type=button class=mbutton value="Save" onclick="save_panel()">
+              <input type=button class=mbutton disabled value="Save as ..." onclick="save_as_panel(); window.location=g_redir">
+              <input type=button class=mbutton value="Cancel" onclick="window.location=g_redir">
+              <input type=button class=mbutton value="Edit in ODB" onclick="window.location.search='?cmd=odb&odb_path='+encodeURIComponent(g_odb_path)">
+              <input type=button class=mbutton value="Edit in old editor" onclick="window.location.search='?cmd=oldhistory&hcmd=Config&group='+encodeURIComponent(g_group)+'&panel='+encodeURIComponent(g_panel)+'&redir='+encodeURIComponent(g_redir)">
+              <input type=button class=mbutton value="Open in old history" onclick="window.location.search='?cmd=oldhistory&group='+encodeURIComponent(g_group)+'&panel='+encodeURIComponent(g_panel)">
+              <input type=button class=mbutton value="Show factor and offset" onclick="show_factor_offset()">
+              <input type=button class=mbutton value="Hide factor and offset" onclick="hide_factor_offset()">
+              <!--- <input type=button class=mbutton value="Clear history cache" onclick="document.form1.hcmd.value='Clear history cache';document.form1.submit()"> --->
+              <input type=button class=mbutton value="Delete panel..." disabled onclick="delete_panel()">
+              <input type=button class=mbutton value="Help" onclick="show_help()">
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <label for=text_timescale>Time scale</label>
+	      <input type=text size=12 name=timescale value=timescale id=text_timescale>
+	      <label for=text_minimum>Minimum</label>
+	      <input type=text size=12 name=minimum value=minimum id=text_minimum>
+	      <label for=text_maximum>Maximum</label>
+	      <input type=text size=12 name=maximum value=maximum id=text_maximum>
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      &nbsp;&nbsp;<input type=checkbox id=cb_zero_ylow><label for=cb_zero_ylow>Zero Y axis</label>
+              &nbsp;&nbsp;<input type=checkbox id=cb_log_axis>Logarithmic Y axis
+              &nbsp;&nbsp;<input type=checkbox id=cb_show_run_markers>Show run markers
+              &nbsp;&nbsp;<input type=checkbox id=cb_show_values>Show values of variables
+              &nbsp;&nbsp;<input type=checkbox id=cb_show_fill>Show graph fill
+              &nbsp;&nbsp;<input type=checkbox id=cb_show_factor>Show factor
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+              <input type=button class=mbutton value="Add active variables" onclick="add_active_vars()">
+              <input type=button class=mbutton value="Add old variables" disabled onclick="add_old_vars()">
+	      Trash can:<img src="icons/trash-2.svg" title="Drag variables here to delete them" id=delete_variable>
+	    </td>
+	  </tr>
+	  <tr>
+	    <td>
+	      <table class=mtable>
+		<thead>
+		  <tr>
+		    <th>Drag<th>Col<th>Event<th>Variable<th>Formula<th>Colour<th>Label<th class=factor_offset>Factor<th class=factor_offset>Offset<th class=factor_offset>VOffset
+		  </tr>
+		</thead>
+		<tbody id="eventTable">
+		</tbody>
+		<tfoot>
+		</tfoot>
+	      </table>
+	    </td>
+	  </tr>
+	</table>
+      </div>
+    </div>
+    <div id="dlgHelp" class="dlgFrame">
+      <div class="dlgTitlebar">History Panel Editor Help</div>
+      <div class="dlgPanel">
+	<div id="dlgHelpText">
+	  <h2>Actions</h2>
+	
+	  <ul align=left>
+	    <li>
+	      <b>Add history variables</b>: click on "Add active variables" to see variables mlogger currently writes to history
+	    </li>
+	    <li>
+	      <b>Add history variables</b>: click on "Add old variables" to see all variables ever written to the history, including removed equipments and renamed history tags
+	    </li>
+	    <li>
+	      <b>Reorder history variables</b>: drag table rows up and down
+	    </li>
+	    <li>
+	      <b>Delete history variables</b>: drag table row to the trash can
+	    </li>
+	    <li>
+	      <b>Save to ODB</b>: click on "Save"
+	    </li>
+	    <li>
+	      <b>Undo, never mind, restore from ODB</b>: click on "Cancel" or reload the page
+	    </li>
+	    <li>
+	      <b>aaa</b>: aaa
+	    </li>
+	  </ul>
+
+	  <h2>Table columns</h2>
+	  
+	  <ul align=left>
+	    <li>
+	      <b>Time scale</b>: default time scale of history plot, i.e. "10m", "1h", "1d"
+	    </li>
+	    <li>
+	      <b>Minimum, Maximum</b>: default vertical scale of history plot, leave blank or use "-inf" and "inf" for autoscale
+	    </li>
+	    <li>
+	      <b>Zero Y axis</b>: fix Y axis at zero, similar ot setting "Minimum" to 0 and "Maximum" to "inf"
+	    </li>
+	    <li>
+	      <b>Logarithmic Y axis</b>: plot all data in log scale
+	    </li>
+	    <li>
+	      <b>Show run markers</b>: show vertical lines corresponding to run start and stop times
+	    </li>
+	    <li>
+	      <b>Show values of variables</b>: show latest values of variables next to the vairables labels
+	    </li>
+	    <li>
+	      <b>Show graph fill</b>: show data as lines or as shaded shapes
+	    </li>
+	    <li>
+	      <b>Show factor</b>: show "factor", "offset" and "voffset" next to labels on old history plots
+	    </li>
+	    <li>
+	      <b>Formula</b>: transform history data values to plotted physics values<br>
+	      for example "3*x+4" or "10*sin(x)".<br>
+	      all javascript math functions can be used.
+	    </li>
+	    <li>
+	      <b>Colour</b>: plot colour in hex RGB format: #RRGGBB, for example: #0000000 is black, #FFFFFF is white, #FF0000 is red, #00FF00 is green, #0000FF is blue
+	    </li>
+	    <li>
+	      <b>"factor", "offset" and "voffset"</b>: old history plots cannot use "formula".<br>
+	      Use "factor", "offset" and "voffset" to scale and position the individual variables on the history plot<br>
+	      according to forumula: plotted_value = offset + factor*history_value - voffset)
+	    </li>
+	  </ul>
+	</div>
+	<br />
+	<button class="dlgButton" onClick="dlgHide('dlgHelp')">Close</button>
+      </div>
+    </div>
+    <div id="dlgAddVars" class="dlgFrame">
+      <div class="dlgTitlebar">Add history variables</div>
+      <div class="dlgPanel">
+	<div>
+	  <table class="mtable subStatusTable" id="event_tags">
+            <tr>
+              <td colspan=100 class="mtableheader subStatusTitle">Add history events and variables</td>
+            </tr>
+	    <tr>
+	      <td colspan=100>
+		<input type=button class=mbutton value="Add selected" onclick="add_selected_tags()">
+		<input type=button class=mbutton value="Add all" onclick="add_all_tags()">
+		<input type=button class=mbutton value="Select all" onclick="select_all_tags()">
+		<input type=button class=mbutton value="Unselect all" onclick="unselect_all_tags()">
+		<input type=button class=mbutton value="Close" onclick="close_add_vars()">
+	      </td>
+	    </tr>
+	    <tr>
+	      <td colspan=100>
+		<label for="event_names" id="event_names_label">event_names_label</label>
+		<select id="event_names" onchange="show_tags(event.target.value)">
+		</select>
+	      </td>
+	    </tr>
+	  </table>
+	</div>
+      </div>
+    </div>
+    <script>
+      load_data();
+
+      var g_group;
+      var g_panel;
+      var g_redir;
+      var g_odb_path;
+      
+      var g_events;
+
+      var g_colours = [ "#00AAFF", "#FF9000", "#FF00A0", "#00C030",
+                        "#A0C0D0", "#D0A060", "#C04010", "#807060",
+                        "#F0C000", "#2090A0", "#D040D0", "#90B000",
+                        "#B0B040", "#B0B0FF", "#FFA0A0", "#A0FFA0"
+                      ];
+
+      function load_data()
+      {
+	  g_group = mhttpd_getParameterByName("group");
+	  g_panel = mhttpd_getParameterByName("panel");
+	  g_redir = mhttpd_getParameterByName("redir");
+	  
+	  set_id_text("group", g_group);
+	  set_id_text("panel", g_panel);
+	  
+	  document.title = "History " + g_group + "/" + g_panel + " editor";
+	  
+	  g_odb_path = "/History/Display/" + g_group + "/" + g_panel;
+	  
+	  //console.log("odb_path: " + g_odb_path);
+	  
+	  load_history_channels();
+	  
+	  mjsonrpc_call("db_get_values", {"paths": [g_odb_path]}).then(function(rpc) {
+              load_data1(rpc);
+	  }).catch(function(error) {
+              mjsonrpc_error_alert(error);
+	  });
+      }
+      
+      function load_history_channels(rpc)
+      {
+          mjsonrpc_call("hs_get_channels").then(function(rpc) {
+              //console.log(rpc);
+	      if (rpc.result.status != 1)
+		  throw "cannot load list of histry channels, hs_get_channels() status " + rpc.result.status;
+	      
+	      set_id_text("default_channel", rpc.result.default_channel);
+	      set_id_text("active_channels", rpc.result.active_channels.join(", "));
+	      set_id_text("all_channels", rpc.result.channels.join(", "));
+	      
+	      let e = get_id("channel_select");
+	      
+	      rpc.result.channels.forEach(function(c) {
+		  let o = document.createElement("option");
+		  o.innerHTML = c;
+		  o.value = c;
+		  e.appendChild(o);
+	      });
+	      
+	      mjsonrpc_db_get_values(["/History/LoggerHistoryChannel"]).then(function(rpc) {
+		  //console.log(rpc);
+		  if (rpc.result.status[0] != 1)
+		      throw "cannot load ODB /History/LoggerHistoryChannel, db_get_values() status " + rpc.result.status[0];
+		  
+		  let s = rpc.result.data[0];
+		  //console.log("Selected channel: " + s);
+		  
+		  let found = false;
+		  e.childNodes.forEach(function(n) {
+		      //console.log(n.innerHTML);
+		      if (n.value === s) {
+			  n.selected = true;
+			  found = true;
+		      }
+		  });
+		  if (!found) {
+		      let o = document.createElement("option");
+		      o.innerHTML = "Unknown channel " + s;
+		      o.value = s;
+		      o.selected = true;
+		      e.appendChild(o);
+		  }
+	      }).catch(function(error) {
+		  mjsonrpc_error_alert(error);
+	      });
+	  }).catch(function(error) {
+	      mjsonrpc_error_alert(error);
+	  });
+      }
+
+      function save_selected_channel()
+      {
+	  console.log("save_selected_channel!");
+	  let e = get_id("channel_select");
+	  //console.log(e);
+	  e.childNodes.forEach(function(o) {
+	      if (o.selected) {
+		  //console.log(o);
+		  mjsonrpc_db_paste(["/History/LoggerHistoryChannel"],[o.value]).then(function(rpc) {
+		      //console.log(rpc);
+		      if (rpc.result.status[0] != 1) {
+			  throw "Cannot save, db_paste() status " + rpc.result.status[0];
+		      } else {
+			  location.reload(); // reload the page!
+		      }
+		  }).catch(function(error) {
+		      mjsonrpc_error_alert(error);
+		  });
+		  return;
+	      }
+	  });
+      }
+  
+      function load_data1(rpc)
+      {
+	  //console.log(rpc);
+	  
+	  if (!rpc.result || !rpc.result.data || rpc.result.data.length < 1) {
+              throw "rpc response has no result or result.data or result.data is too short";
+	  }
+	  
+	  let config = rpc.result.data[0];
+	  
+	  //console.log(config);
+	  
+	  set_cb("cb_zero_ylow",        config, "zero ylow", true);
+	  set_cb("cb_log_axis",         config, "log axis", false);
+	  set_cb("cb_show_run_markers", config, "show run markers", true);
+	  set_cb("cb_show_values",      config, "show values", true);
+	  set_cb("cb_show_fill",        config, "show fill", true);
+	  set_cb("cb_show_factor",      config, "show factor", false);
+	  
+	  set_value("text_timescale", config, "timescale", "1h");
+	  set_value("text_minimum", config, "minimum", "0");
+	  set_value("text_maximum", config, "maximum", "0");
+	  
+	  let num = 0;
+          if (config) {
+	      num = Math.max(num, xlength(config.variables));
+	      num = Math.max(num, xlength(config.label));
+	      num = Math.max(num, xlength(config.colour));
+	      num = Math.max(num, xlength(config.formula));
+	      num = Math.max(num, xlength(config.factor));
+	      num = Math.max(num, xlength(config.offset));
+	      num = Math.max(num, xlength(config.voffset));
+	      num = Math.max(num, xlength(config["show raw value"]));
+          }
+	  
+	  //console.log("num: " + num);
+
+          let xhide_factor_offset = true;
+	  
+	  for (let i=0; i<num; i++) {
+              let vi = xelement(config.variables, i, "<empty>:<empty>");
+              let v = vi.split(":");
+              let event_name = v[0];
+              let tag_name = v[1];
+              
+              let tr = add_to_table(i);
+              get_id2(tr.id,"colbox").style.backgroundColor = xelement(config.colour, i, "black");
+              get_id2(tr.id,"colbox").innerHTML = "&nbsp;";
+              get_id2(tr.id,"event").innerHTML  = event_name;
+              get_id2(tr.id,"tag").innerHTML    = tag_name;
+              get_id2(tr.id,"formula").value    = xelement(config.formula, i, "");
+              get_id2(tr.id,"colour").value     = xelement(config.colour, i, "black");
+              get_id2(tr.id,"label").value      = xelement(config.label, i, "");
+              get_id2(tr.id,"factor").value     = xelement(config.factor, i, 1.0);
+              get_id2(tr.id,"offset").value     = xelement(config.offset, i, 0.0);
+              get_id2(tr.id,"voffset").value    = xelement(config.voffset, i, 0.0);
+
+	      // one time migration of factor and offset
+	      if (!get_id2(tr.id,"formula").value) {
+		  if (get_id2(tr.id,"factor").value != 1 ||
+		      get_id2(tr.id,"offset").value != 0 ||
+		      get_id2(tr.id,"voffset").value != 0) {
+		      get_id2(tr.id,"formula").value = pnumber(get_id2(tr.id,"offset").value) + "+" + pnumber(get_id2(tr.id,"factor").value) + "*(x-" + pnumber(get_id2(tr.id,"voffset").value) + ")";
+		  }
+	      }
+
+	      if (get_id2(tr.id,"factor").value != 1 ||
+		  get_id2(tr.id,"offset").value != 0 ||
+		  get_id2(tr.id,"voffset").value != 0) {
+                  xhide_factor_offset = false;
+              }
+          }
+
+          if (xhide_factor_offset) {
+              hide_factor_offset();
+          }
+
+	  let de = get_id("delete_variable");
+	  de.addEventListener('dragover', handle_dragover_delete);
+      }
+
+      function pnumber(v)
+      {
+          if (v < 0)
+              return "("+v+")";
+          return v;
+      }
+
+      function add_to_table(index)
+      {
+	  let table = get_id("eventTable");
+
+	  let tr = document.createElement("tr");
+	  tr.id = "event_" + index;
+
+	  //tr.draggable = true;
+          //tr.addEventListener('dragstart', handle_dragstart);
+          //tr.addEventListener('dragover',  handle_dragover);
+          //tr.addEventListener('dragend',   handle_dragend);
+          //tr.addEventListener('drag',      handle_drag);
+	  //tr.style.cursor = "move";
+
+	  let td;
+
+	  let dd = document.createElement("img");
+	  dd.draggable = true;
+          dd.addEventListener('dragstart', handle_dragstart);
+          dd.addEventListener('dragover',  handle_dragover);
+          dd.addEventListener('dragend',   handle_dragend);
+          //dd.addEventListener('drag',      handle_drag);
+	  dd.style.cursor = "move";
+	  dd.src = "icons/menu.svg";
+
+	  td = document.createElement("td");
+	  td.align = "center";
+	  td.appendChild(dd);
+	  tr.appendChild(td);
+
+	  //td = document.createElement("td");
+	  //td.align = "center";
+	  //td.innerHTML = "<input type=\"checkbox\">";
+	  //tr.appendChild(td);
+
+	  td = document.createElement("td");
+	  td.align = "left";
+	  td.id    = tr.id + "_colbox";
+	  td.innerHTML = "colbox";
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+	  td.align = "left";
+	  td.id    = tr.id + "_event";
+	  td.innerHTML = "event";
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+	  td.align = "left";
+	  td.id    = tr.id + "_tag";
+	  td.innerHTML = "tag";
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_formula";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "formula";
+	  ii.size  = 15;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_colour";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "colour";
+	  ii.size  = 8;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_label";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "label";
+	  ii.size  = 8;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+          td.className = "factor_offset";
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_factor";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "factor";
+	  ii.size  = 8;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+          td.className = "factor_offset";
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_offset";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "offset";
+	  ii.size  = 8;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  td = document.createElement("td");
+          td.className = "factor_offset";
+	  ii = document.createElement("input");
+	  ii.id    = tr.id + "_voffset";
+	  ii.type  = "text";
+	  ii.align = "left";
+	  ii.value = "voffset";
+	  ii.size  = 8;
+	  td.appendChild(ii);
+	  tr.appendChild(td);
+	  
+	  table.appendChild(tr);
+
+	  return tr;
+      }
+
+      function save_panel()
+      {
+	  let table = get_id("eventTable");
+	  
+	  let rows = table.rows;
+	  let num = rows.length;
+
+          if (num < 1) {
+              mjsonrpc_error_alert("Cannot save empty panel to ODB, please add at least one variable!");
+          }
+
+	  let def = {};
+	  def["Zero ylow"]        = get_cb("cb_zero_ylow");
+	  def["Log axis"]         = get_cb("cb_log_axis");
+	  def["Show run markers"] = get_cb("cb_show_run_markers");
+	  def["Show values"]      = get_cb("cb_show_values");
+	  def["Show fill"]        = get_cb("cb_show_fill");
+	  def["Show factor"]      = get_cb("cb_show_factor");
+	  
+	  def["Timescale"]        = get_value("text_timescale");
+	  
+	  def["Minimum/key"] = { "type" : TID_DOUBLE };
+	  def["Minimum"]          = xnumber(get_value("text_minimum"));
+	  
+	  def["Maximum/key"] = { "type" : TID_DOUBLE };
+	  def["Maximum"]          = xnumber(get_value("text_maximum"));
+	  
+	  def["Variables/key"] = { "type" : TID_STRING, "num_values" : num, "item_size" : 64 };
+	  def["Variables"] = [];
+	  def["Formula/key"]   = { "type" : TID_STRING, "num_values" : num, "item_size" : 64 };
+	  def["Formula"]   = [];
+	  def["Colour/key"]    = { "type" : TID_STRING, "num_values" : num, "item_size" : 32 };
+	  def["Colour"]    = [];
+	  def["Label/key"]     = { "type" : TID_STRING, "num_values" : num, "item_size" : 32 };
+	  def["Label"]     = [];
+	  def["Factor/key"]     = { "type" : TID_DOUBLE, "num_values" : num };
+	  def["Factor"]     = [];
+	  def["Offset/key"]     = { "type" : TID_DOUBLE, "num_values" : num };
+	  def["Offset"]     = [];
+	  def["VOffset/key"]     = { "type" : TID_DOUBLE, "num_values" : num };
+	  def["VOffset"]     = [];
+	  
+	  for (let i=0; i<rows.length; i++) {
+              //let tr = rows[i].cells;
+	      let id = rows[i].id;
+              let variable = get_id2(id,"event").innerHTML + ":" + get_id2(id,"tag").innerHTML;
+              def["Variables"].push(variable);
+              def["Formula"].push(        get_id2(id, "formula").value);
+              def["Colour"].push(         get_id2(id, "colour").value);
+              def["Label"].push(          get_id2(id, "label").value);
+              def["Factor"].push( xnumber(get_id2(id, "factor").value));
+              def["Offset"].push( xnumber(get_id2(id, "offset").value));
+              def["VOffset"].push(xnumber(get_id2(id, "voffset").value));
+	  }
+	  
+	  //console.log("history panel:");
+	  //console.dir(def);
+
+	  mjsonrpc_send_request(
+              [
+                  mjsonrpc_make_request("db_create", [{"path": g_odb_path, "type": TID_KEY}]),
+                  mjsonrpc_make_request("db_paste", {"paths": [g_odb_path], "values": [def]})
+              ]
+          ).then(function(rpc) {
+              if (rpc[0].result.status[0] != 1 && rpc[0].result.status[0] != 311) {
+		  throw "Cannot save panel to ODB " + g_odb_path + ", db_create() status " + rpc[0].result.status[0] + ", see midas.log!";
+              }
+              if (rpc[1].result.status[0] != 1) {
+		  throw "Cannot save panel to ODB " + g_odb_path + ", db_paste() status " + rpc[1].result.status[0] + ", see midas.log!";
+              }
+	      window.location=g_redir;
+	  }).catch(function(error) {
+              mjsonrpc_error_alert(error);
+	  });
+      }
+
+      function get_id2(id, subid)
+      {
+	  let xid = id + "_" + subid;
+	  return get_id(xid);
+      }
+
+      var drag_tr;
+      var drag_id;
+      var drag_del = false;
+      
+      function handle_dragstart(event)
+      {
+	  //console.log("dragstart:");
+	  //console.log(event);
+	  //console.log(this);
+
+	  drag_tr = event.target.parentNode.parentNode;
+	  drag_id = drag_tr.id;
+	  drag_del = false;
+
+          drag_tr.style.opacity = 0.2;
+				       
+	  //console.log(drag_tr);
+	  //console.log(drag_id);
+      }
+      
+      function handle_dragover(event)
+      {
+	  //console.log("dragover:");
+	  //console.log(event);
+	  //console.log(this);
+
+	  drag_del = false;
+	  this.parentNode.style.cursor = "move";
+
+	  event.dataTransfer.dropEffect = 'move';
+	  event.preventDefault();
+
+	  let event_tr = event.target;
+	  if (event_tr.nodeName != "TR")
+	      event_tr = event_tr.parentNode;
+	  if (event_tr.nodeName != "TR")
+	      event_tr = event_tr.parentNode;
+	  if (event_tr.nodeName != "TR")
+	      event_tr = event_tr.parentNode;
+
+	  if (event_tr.nodeName != "TR") {
+	      //console.log("NOTR!");
+	      return;
+	  }
+
+	  if (event_tr == drag_tr) {
+	      //console.log("MYSELF!");
+	      return;
+	  }
+
+	  console.log(event_tr);
+	  console.log(drag_tr);
+
+	  let rows = Array.from(event_tr.parentNode.children);
+	  if (rows.indexOf(event_tr) > rows.indexOf(drag_tr)) {
+	      event_tr.after(drag_tr);
+	  } else {
+	      event_tr.before(drag_tr);
+	  }
+	  
+	  return false;
+      }
+
+      function handle_dragover_delete(event)
+      {
+	  //console.log("dragover_delete:");
+	  //console.log(event);
+	  //console.log(this);
+
+	  drag_del = true;
+	  drag_tr.style.opacity = 0.0;
+	  this.style.cursor = "crosshair";
+
+	  event.dataTransfer.dropEffect = 'move';
+	  event.preventDefault();
+
+	  let e = get_id("delete_variable");
+	  e.style.background = "red";
+
+	  return false;
+      }
+      
+      //function handle_drag(event)
+      //{
+	  //console.log("drag:");
+	  //console.log(this.x);
+	  //console.log(this.minX);
+	  //console.log(event);
+	  //console.log(this);
+      //}
+      
+      function handle_dragend(event, td)
+      {
+	  //console.log("dragend:");
+	  //console.log(event);
+	  //console.log(this);
+	  //console.log(drag_del);
+
+	  let e = get_id("delete_variable");
+	  e.style.background = "";
+
+	  if (drag_del) {
+	      drag_tr.remove();
+	      return;
+	  }
+
+	  drag_tr.style.opacity = 1.0;
+	  drag_tr.style.cursor = "move";
+      }
+
+      function add_active_vars()
+      {
+          if (!g_events) {
+              mjsonrpc_call("hs_reopen").then(function(rpc) {
+                  load_active_events();
+              });
+              // dlgShow will be called after events are loaded
+          } else {
+              dlgShow(get_id("dlgAddVars"), true);
+          }
+      }
+
+      function close_add_vars()
+      {
+	  //console.log("close_add_vars!");
+	  dlgHide("dlgAddVars");
+      }
+
+      function load_active_events()
+      {
+	  //console.log("load_active_events!");
+
+	  set_id_text("event_names_label", "Select active event: ");
+
+          mjsonrpc_call("hs_get_active_events").then(function(rpc) {
+	      //console.log(rpc);
+	      if (rpc.result.status != 1)
+		  throw "cannot load list of active events, hs_get_active_events() status " + rpc.result.status;
+	      
+	      mjsonrpc_call("hs_get_tags", {"events": rpc.result.events}).then(function(rpc) {
+		  //console.log(rpc);
+		  if (rpc.result.status != 1)
+		      throw "cannot load history event tags, hs_get_tags() status " + rpc.result.status;
+		  
+		  rpc.result.events.forEach(function(i) {
+		      // console.log(i);
+		      if (i.status === 1) {
+			  add_event(i);
+		      }
+		  });
+		  add_tags(rpc.result.events[0].name);
+		  dlgShow(get_id("dlgAddVars"), true);
+
+			}).catch(function(error) {
+		  mjsonrpc_error_alert(error);
+	      });
+	  }).catch(function(error) {
+              mjsonrpc_error_alert(error);
+	  });
+      }
+      
+      function add_event(event)
+      {
+	  //console.log("add_event: " + event.name);
+	  //console.log(event);
+	  if (event.tags.length === 0) {
+	      return;
+	  }
+	  add_event_select(event.name);
+	  event.tags.forEach(function(t) {
+	      //console.log(t);
+	      if (!g_events) {
+		  g_events = new Map();
+	      }
+	      if (!(g_events.has(event.name))) {
+		  g_events.set(event.name, new Array);
+	      }
+	      let ee = g_events.get(event.name);
+	      if ("n_data" in t) {
+		  let n_data = 1*t.n_data;
+		  //console.log(n_data);
+		  for (let i=0; i<n_data; i++) {
+		      ee.push(t.name + "[" + i + "]");
+		  }
+	      } else {
+		  ee.push(t.name);
+	      }
+	  });
+      }
+
+      function add_event_select(event_name)
+      {
+	  //console.log("add_event_select: " + event_name);
+	  
+	  //set_id_text("event_names_label", "Currently active events:");
+	  
+	  let e = get_id("event_names");
+	  
+	  let o = document.createElement("option");
+	  o.innerHTML = event_name;
+	  e.appendChild(o);
+      }
+
+      function add_tags(event_name)
+      {
+	  //console.log("add_tags: " + event_name);
+	  //console.log(g_events);
+
+          if (!g_events) {
+              return;
+          }
+	  
+	  let tags = g_events.get(event_name);
+
+	  if (!tags) {
+	      return;
+	  }
+	  
+	  //console.log(tags);
+	  
+	  let e = document.getElementById("event_tags");
+	  if (!e) throw "cannot find HTML id event_tags";
+	  
+	  tags.forEach(function(tag_name) {
+	      let tr = document.createElement("tr");
+	      let td = document.createElement("td");
+	      td.innerHTML = "<input type=\"checkbox\" id=\"" + tag_name + "\">" + "<input type=\"button\" id=\"" + event_name + ":" + tag_name + "\"" + "value=\"Add\" onclick=\"add_tag(event.target.id);close_add_vars()\">";
+	      tr.appendChild(td);
+	      td = document.createElement("td");
+	      td.innerHTML = event_name;
+	      tr.appendChild(td);
+	      td = document.createElement("td");
+	      td.innerHTML = tag_name;
+	      tr.appendChild(td);
+	      e.appendChild(tr);
+	  });
+      }
+
+      function show_tags(event_name)
+      {
+	  //console.log("show_tags: " + event_name);
+	  remove_unselected_tags();
+	  add_tags(event_name);
+      }
+
+      function remove_unselected_tags()
+      {
+	  //console.log("remove_unselected_tags!");
+	  
+	  let e = get_id("event_tags");
+	  
+	  let r = Array();
+	  
+	  // note: cannot iterate over children and remove children at the same time,
+	  // instead, iterate first, collect list of children to remove,
+	  // then remove them later! K.O.
+	  e.childNodes.forEach(function(n) {
+	      if (n.childNodes.length !== 3) {
+		  return;
+	      }
+	      if (n.childNodes[0].childNodes[0].checked) {
+		  //console.log(n);
+		  return;
+	      }
+	      r.push(n);
+	  });
+	  
+	  r.forEach(function(n) {
+	      e.removeChild(n);
+	  });
+      }
+
+      function add_selected_tags()
+      {
+	  console.log("add_selected_tags!");
+	  
+	  let e = get_id("event_tags");
+
+	  let count = 0;
+	  
+	  e.childNodes.forEach(function(n) {
+	      if (n.childNodes.length !== 3) {
+		  return;
+	      }
+	      if (n.childNodes[0].childNodes[0].checked) {
+		  add_var(n.childNodes[1].innerHTML, n.childNodes[2].innerHTML);
+		  count++;
+	      }
+	  });
+
+	  if (count > 0) {
+	      close_add_vars();
+	  }
+      }
+      
+      function add_all_tags()
+      {
+	  console.log("add_all_tags!");
+	  
+	  let e = get_id("event_tags");
+	  
+	  e.childNodes.forEach(function(n) {
+	      if (n.childNodes.length !== 3) {
+		  return;
+	      }
+	      add_var(n.childNodes[1].innerHTML, n.childNodes[2].innerHTML);
+	  });
+
+	  close_add_vars();
+      }
+
+      function select_all_tags()
+      {
+	  console.log("select_add_tags!");
+	  
+	  let e = get_id("event_tags");
+	  
+	  e.childNodes.forEach(function(n) {
+	      if (n.childNodes.length !== 3) {
+		  return;
+	      }
+	      n.childNodes[0].childNodes[0].checked = true;
+	  });
+      }
+      
+      function unselect_all_tags()
+      {
+	  console.log("unselect_add_tags!");
+	  
+	  let e = get_id("event_tags");
+
+	  e.childNodes.forEach(function(n) {
+	      if (n.childNodes.length !== 3) {
+		  return;
+	      }
+	      n.childNodes[0].childNodes[0].checked = false;
+	  });
+      }
+      
+      function add_tag(id)
+      {
+	  //console.log("add_tag: " + id);
+
+	  let vv = id.split(":");
+	  let event_name = vv[0];
+	  let tag_name = vv[1];
+
+	  add_var(event_name, tag_name);
+      }
+
+      function add_var(event_name, tag_name)
+      {
+	  //console.log("add_var: " + event_name + ":" + tag_name);
+
+	  let e = get_id("eventTable");
+	  let i = 0;
+	  e.childNodes.forEach(function(n) {
+	      let id = n.id;
+	      if (id) {
+		  let vv = id.split("_");
+		  let ev = 1.0*vv[1]; // convert to number
+		  if (ev > i) { // must be number comparison
+		      i = ev;
+		  }
+	      }
+	  });
+
+	  i += 1.0; // must be number
+
+	  let colour = g_colours[i];
+
+	  if (!colour)
+	      colour = "#000000";
+
+          let tr = add_to_table(i);
+          get_id2(tr.id,"colbox").style.backgroundColor = colour;
+          get_id2(tr.id,"colbox").innerHTML = "&nbsp;";
+          get_id2(tr.id,"event").innerHTML  = event_name;
+          get_id2(tr.id,"tag").innerHTML    = tag_name;
+          get_id2(tr.id,"formula").value    = "";
+          get_id2(tr.id,"colour").value     = colour;
+          get_id2(tr.id,"label").value      = "";
+          get_id2(tr.id,"factor").value     = 1.0;
+          get_id2(tr.id,"offset").value     = 0.0;
+          get_id2(tr.id,"voffset").value    = 0.0;
+      }
+
+      function hide_factor_offset()
+      {
+          console.log("hide_factor_offset!");
+          let elements = document.getElementsByClassName('factor_offset');
+          //console.log(elements);
+          for (e of elements) {
+              //console.log(e);
+              e.style.display = "none";
+          };
+      }
+
+      function show_factor_offset()
+      {
+          console.log("show_factor_offset!");
+          let elements = document.getElementsByClassName('factor_offset');
+          //console.log(elements);
+          for (e of elements) {
+              //console.log(e);
+              e.style.display = "";
+          };
+      }
+
+      function delete_panel()
+      {
+	  throw "delete_panel() not implemented!";
+      }
+      
+      function show_help()
+      {
+	  //throw "show_help() not implemented!";
+	  dlgShow(get_id("dlgHelp"));
+      }
+      
+      function get_cb(id)
+      {
+	  let e = get_id(id);
+	  return e.checked;
+      }
+      
+      function get_value(id)
+      {
+	  let e = get_id(id);
+	  return e.value;
+      }
+      
+      function set_cb(id, config, name, default_value)
+      {
+	  let e = get_id(id);
+	  if (config && name in config) {
+              e.checked = config[name];
+	  } else {
+              e.checked = default_value;
+	  }
+      }
+      
+      function set_value(id, config, name, default_value)
+      {
+          let e = get_id(id);
+          if (config && name in config) {
+              e.value = config[name];
+          } else {
+              e.value = default_value;
+          }
+      }
+      
+      function set_e_value(e, value)
+      {
+	  e.value = value;
+      }
+      
+      function set_ec_value(e, value)
+      {
+	  e = e.childNodes[0];
+	  if (!e) throw "no children";
+	  e.value = value;
+      }
+      
+      function get_ec_value(e)
+      {
+	  e = e.childNodes[0];
+	  if (!e) throw "no children";
+	  return e.value;
+      }
+      
+      function set_id_text(id, text)
+      {
+	  set_e_text(get_id(id), text);
+      }
+      
+      function set_e_text(e, text)
+      {
+	  e.innerHTML = text;
+      }
+      
+      function get_id(id)
+      {
+	  let e = document.getElementById(id);
+	  if (!e) throw "cannot find HTML id \"" + id + "\"";
+	  return e;
+      }
+      
+      function xlength(a)
+      {
+          if (a) {
+              if (Array.isArray(a)) {
+                 return a.length;
+              } else {
+                 return 1;
+              }
+	  } else {
+              return 0;
+	  }
+      }
+      
+      function xelement(a, i, d)
+      {
+          if (a && Array.isArray(a)) {
+              if (a[i])
+                 return a[i];
+              else
+                 return d;
+          } else if (a) {
+              return a;
+          } else {
+              return d;
+	  }
+      }
+      
+      function xnumber(v)
+      {
+	  if (v === "inf") return "Infinity";
+	  if (v === "-inf") return "-Infinity";
+	  if (v == "Infinity") return "Infinity";
+	  if (v == "-Infinity") return "-Infinity";
+	  return Number(v);
+      }
+      
+    </script>
+  </body>
+</html>
+

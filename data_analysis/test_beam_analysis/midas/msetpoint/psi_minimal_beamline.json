@@ -1,0 +1,201 @@
+{
+   "/MIDAS version": "2.1",
+   "/filename": "psi.json",
+   "/ODB path": "/",
+
+   "Equipment": {
+      "EPICS": {
+         "Settings": {
+            "Commands": {
+               "On/key": {
+                  "type": 12,
+                  "item_size": 11,
+                  "access_mode": 7,
+                  "last_written": 1695048782
+               },
+               "On": ":COM:2 Ein",
+               "Off/key": {
+                  "type": 12,
+                  "item_size": 11,
+                  "access_mode": 7,
+                  "last_written": 1695048782
+               },
+               "Off": ":COM:2 Aus",
+               "Reset/key": {
+                  "type": 12,
+                  "item_size": 13,
+                  "access_mode": 7,
+                  "last_written": 1695048782
+               },
+               "Reset": ":COM:2 Reset",
+               "Reset-DSP/key": {
+                  "type": 12,
+                  "item_size": 17,
+                  "access_mode": 7,
+                  "last_written": 1695048782
+               },
+               "Reset-DSP": ":COM:2 Reset-DSP"
+            },
+            "Enabled/key": {
+               "type": 8,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Enabled": true,
+            "EPICS Gateway/key": {
+               "type": 12,
+               "item_size": 28,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "EPICS Gateway": "hipa-cagw:5062 mpc2037:5064",
+            "Allow write access/key": {
+               "type": 8,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Allow write access": true,
+            "Update interval/key": {
+               "type": 7,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Update interval": 1000,
+            "Filename Config/key": {
+               "type": 12,
+               "item_size": 10,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Filename Config": "pie5.json",
+            "Filename Values/key": {
+               "type": 12,
+               "item_size": 24,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Filename Values": "msetpoint/test_0.5.json",
+            "Names/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Names": "Proton current",
+            "CA Name/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "CA Name": "MHC4",
+            "CA Demand/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "CA Demand": "",
+            "CA Measured/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "CA Measured": ":IST:2",
+            "CA Status/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "CA Status": "",
+            "CA Command/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "CA Command": "",
+            "Device type/key": {
+               "type": 7,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Device type": 6,
+            "Unit/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Unit": "uA",
+            "Format/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Format": "%f1",
+            "Description/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Description": "",
+            "Group/key": {
+               "type": 8,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Group": false,
+            "Status/key": {
+               "type": 12,
+               "item_size": 64,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Status": "",
+            "Incdec/key": {
+               "type": 9,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Incdec": 0,
+            "History/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "History": "EPICS/Proton Current",
+            "Update Threshold Measured/key": {
+               "type": 9,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Update Threshold Measured": 0.0099999998,
+            "Warning Threshold/key": {
+               "type": 9,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Warning Threshold": 0.5,
+            "Command/key": {
+               "type": 12,
+               "item_size": 32,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Command": "",
+            "Filevalue/key": {
+               "type": 9,
+               "access_mode": 7,
+               "last_written": 1695048782
+            },
+            "Filevalue": 0
+         }
+      }
+   }
+}

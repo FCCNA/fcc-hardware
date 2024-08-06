@@ -1,0 +1,35 @@
+
+#[[
+MidasConfig
+---------
+Defines Midas include dirs and libraries
+
+Use this module by invoking find_package with the form::
+
+  find_package(Midas
+    [REQUIRED]             # Fail with error if Midas is not found
+    )                     
+
+This module finds headers and requested component libraries. During installation,
+paths to these directories are hard-coded and results are reported in variables::
+
+  MIDAS_FOUND            - True if headers and requested libraries were found
+  MIDAS_PACKAGE_NAME     - Midas package name
+  MIDAS_INCLUDE_DIRS     - Midas include directories
+  MIDAS_LIBRARY_DIRS     - Midas library location
+  MIDAS_LIBRARIES        - Midas library and it's dependencies
+
+#]]
+
+
+if (MIDAS_FOUND)
+    return()
+endif (MIDAS_FOUND)
+set (MIDAS_FOUND TRUE)
+
+set (MIDAS_PACKAGE_NAME midas )
+
+list (APPEND MIDAS_INCLUDE_DIRS @CONFIG_MIDAS_INCLUDE_DIRS@)
+list (APPEND MIDAS_LIBRARY_DIRS @CONFIG_MIDAS_LIBRARY_DIRS@)
+list (APPEND MIDAS_LIBRARIES    @CONFIG_MIDAS_LIBRARIES1@)
+list (APPEND MIDAS_LIBRARIES    @CONFIG_MIDAS_LIBRARIES2@)

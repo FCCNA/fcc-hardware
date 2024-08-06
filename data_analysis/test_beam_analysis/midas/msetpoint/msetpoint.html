@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="mhistory.js"></script>
+   <script src="filesrw.js"></script>
+   <title>MSetPoint</title>
+
+   <style>
+       .mtable {
+           border-spacing: 0;
+       }
+       .mtableheader {
+           border-bottom-left-radius: 0;
+           border-bottom-right-radius: 0;
+           border-right: 1px solid white;
+       }
+       .mtable td {
+           padding: 3px;
+           border-right: 1px solid white;
+       }
+       .mtable th {
+           padding: 5px;
+           text-align: left;
+       }
+   </style>
+</head>
+
+<body class="mcss" onload="mhttpd_init('MSetPoint');mhistory_init();msetpoint_init();">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table id="spTable" class="mtable">
+      <tr>
+         <td colspan="11" style="border-radius: 12px;">
+            <button class="dlgButton" id="btnCommand" title="Send a command to device(s)" onclick="directCommand();">Command</button>
+            <button class="dlgButton" id="btnSave" title="Save current setting" onclick="saveDemandPicker();">Save</button>
+            <button class="dlgButton" id="btnLoad" title="Load setting from file" onclick="loadDemandPicker();">Load</button>
+            <button class="dlgButton" id="btnExport" title="Export current setting" onclick="exportDemandQuery();">Export</button>
+            <button class="dlgButton" id="btnImport" title="Import current setting" onclick="importFile();">Import</button>
+            <button class="dlgButton" title="Open help window"
+                    onclick="window.open('https://bitbucket.org/tmidas/midas/wiki/MSetPoint?mode=global', '_blank');">?</button>
+            <span id="info" style="margin-top: 5px; margin-left: 10px; background-color: var(--myellow);"></span>
+            <span id="warning" style="margin-top: 5px; margin-left: 10px; background-color: var(--mred);"></span>
+            <span class="modbvalue" style="float: right;margin-top: 5px; margin-right: 5px;"
+                 data-odb-path="/Equipment/EPICS/Settings/Filename Values"></span>
+         </td>
+      </tr>
+      <tr style="user-select: none">
+         <th colspan="2" class="mtableheader">
+            &nbsp;&nbsp;&nbsp;&nbsp;Device
+         </th>
+         <th class="mtableheader">
+            Description
+         </th>
+         <th class="mtableheader">
+            Status
+         </th>
+         <th class="mtableheader">
+            File value
+         </th>
+         <th class="mtableheader">
+            <button onclick="setQueryFileValue(event);" class="dlgButton" id="btnFileValue">&rarr;</button>
+         </th>
+         <th colspan="2" class="mtableheader" style="width: 170px">
+            Set value
+         </th>
+         <th colspan="3" class="mtableheader" style="border-right: 0">
+            Measured
+         </th>
+      </tr>
+
+   </table>
+</div>
+
+<!-- Select file dialog -->
+<div id="dlgFileSelect" class="dlgFrame">
+   <div class="dlgTitlebar">Select file</div>
+   <div class="dlgPanel">
+      <br />
+      <div style="margin: auto;width: 70%">
+         <input type="file" id="fileSelector" accept=".json">
+      </div>
+      <br /><br />
+      <button class="dlgButton" onclick="importFileFromSelector(this.parentNode.parentNode);dlgHide('dlgFileSelect');">Load</button>
+      <button class="dlgButton" onclick="dlgHide('dlgFileSelect')">Cancel</button>
+   </div>
+</div>
+
+<!-- Direct command dialog -->
+<div id="dlgDirectCmd" class="dlgFrame">
+   <div class="dlgTitlebar">Select command</div>
+   <div class="dlgPanel">
+      <br />
+      <div id="cmdButtons"></div>
+      <br />
+      <button class="dlgButton" onclick="dlgHide('dlgDirectCmd')">Cancel</button>
+   </div>
+</div>
+
+<script>
+
+   let mspVersion = "0.9";
+
+   let dt_string = [ "", "Magnet", "Beamblocker", "PSA", "Separator", "Slit", "Value" ];
+   let spTable = [];
+   let inInit = true; // signals we are initializing and demand values should not be sent to ODB
+
+   function pageReload() {
+      window.location.reload();
+   }
+
+   function resizeArray(a, l, def) {
+      if (a === undefined)
+         a = new Array(l).fill(def ? def : 0);
+      if (a.length > l)
+         a.length = l;
+      else if (a.length < l)
+         a = a.concat(new Array(l - a.length).fill(def ? def : 0));
+      return a;
+   }
+
+   function msetpoint_init() {
+      mjsonrpc_db_get_value('/Equipment/EPICS').then(
+              rpc => {
+                 let epics = rpc.result.data[0];
+                 if (epics === null) {
+                    window.location.href = "?cmd=custom&page=MSPConfig";
+                    return;
+                 }
+
+                 let l = epics.settings.names.length;
+                 inInit = true;
+
+                 // Disable certain things if no write access
+                 if (epics.settings["allow write access"] !== true) {
+                    document.getElementById("btnCommand").style.display = "none";
+                    document.getElementById("btnLoad").style.display = "none";
+                    document.getElementById("btnSave").style.display = "none";
+                    document.getElementById("btnImport").style.display = "none";
+                    document.getElementById("btnExport").style.display = "none";
+                    document.getElementById("btnFileValue").style.display = "none";
+                    document.getElementById("info").innerHTML = "&nbsp;Read-only mode&nbsp;";
+                 }
+
+                 // create or adjust Filevalue values
+                 if (epics.settings.filevalue === undefined) {
+                    epics.settings.filevalue = resizeArray(epics.settings.filevalue, l);
+                    mjsonrpc_db_create([{"path": "/Equipment/EPICS/Settings/Filevalue",
+                       "type": TID_FLOAT, "array_length": l}]).then(rpc =>
+                            modbset("/Equipment/EPICS/Settings/Filevalue", epics.settings.filevalue));
+                 } else {
+                    if (epics.settings.filevalue.length !== l) {
+                       epics.settings.filevalue = resizeArray(epics.settings.filevalue, l);
+                       mjsonrpc_db_resize(["/Equipment/EPICS/Settings/Filevalue"], [l]).then(rpc =>
+                               modbset("/Equipment/EPICS/Settings/Filevalue", epics.settings.filevalue));
+                    }
+                 }
+
+                 // create or adjust "enabled" flags
+                 if (epics.settings.enabled === undefined) {
+                    epics.settings.enabled = resizeArray(epics.settings.enabled, l, true);
+                    mjsonrpc_db_create([{"path": "/Equipment/EPICS/Settings/Enabled",
+                       "type": TID_BOOL, "array_length": l}]).then(rpc =>
+                            modbset("/Equipment/EPICS/Settings/Enabled", epics.settings.enabled));
+                 } else {
+                    if (epics.settings.enabled.length !== l) {
+                       epics.settings.enabled = resizeArray(epics.settings.enabled, l, true);
+                       mjsonrpc_db_resize(["/Equipment/EPICS/Settings/Enabled"], [l]).then(rpc =>
+                               modbset("/Equipment/EPICS/Settings/Enabled", epics.settings.enabled));
+                    }
+                 }
+
+                 if (epics.variables === undefined) {
+                    epics.variables = {};
+                    epics.variables.demand = new Array(l).fill(0);
+                    epics.variables.measured = new Array(l).fill(0);
+                    mjsonrpc_db_create([{"path": "/Equipment/EPICS/Variables", "type": TID_KEY},
+                       {"path": "/Equipment/EPICS/Variables/Demand", "type": TID_FLOAT, "array_length": l},
+                       {"path": "/Equipment/EPICS/Variables/Measured", "type": TID_FLOAT, "array_length": l}
+                    ]);
+                 }
+
+                 // create or adjust Demand values
+                 if (epics.variables.demand === undefined) {
+                    epics.variables.demand = resizeArray(epics.variables.demand, l);
+                    mjsonrpc_db_create([{"path": "/Equipment/EPICS/Variables/Demand",
+                       "type": TID_FLOAT, "array_length": l}]).then(rpc =>
+                            modbset("/Equipment/EPICS/Variables/Demand", epics.variables.demand));
+                 } else {
+                    if (epics.variables.demand.length !== l) {
+                       epics.variables.demand = resizeArray(epics.variables.demand, l);
+                       mjsonrpc_db_resize(["/Equipment/EPICS/Variables/Demand"], [l]).then(rpc =>
+                               modbset("/Equipment/EPICS/Variables/Demand", epics.variables.demand));
+                    }
+                 }
+
+                 // create or adjust Measured values
+                 if (epics.variables.measured === undefined) {
+                    epics.variables.measured = resizeArray(epics.variables.measured, l);
+                    mjsonrpc_db_create([{"path": "/Equipment/EPICS/Variables/Measured",
+                       "type": TID_FLOAT, "array_length": l}]).then(rpc =>
+                            modbset("/Equipment/EPICS/Variables/Measured", epics.variables.measured));
+                 } else {
+                    if (epics.variables.measured.length !== l) {
+                       epics.variables.measured = resizeArray(epics.variables.measured, l);
+                       mjsonrpc_db_resize(["/Equipment/EPICS/Variables/Measured"], [l]).then(rpc =>
+                               modbset("/Equipment/EPICS/Variables/Measured", epics.variables.measured));
+                    }
+                 }
+
+                 try {
+                    spTable.commands = epics.settings.commands;
+                    let interval = epics.settings["update interval"];
+                    if (interval === undefined)
+                       interval = 1000;
+                    mhttpd_set_refresh_interval(interval);
+                 } catch (e) {
+                    dlgAlert("Invalid or missing \"/Equipment/EPICS/Settings\" in ODB<br />" +
+                       "Please load a valid beamline configuration file");
+                    return;
+                 }
+
+                 let table = document.getElementById('spTable');
+                 for (let i = 0; i < epics.settings.names.length; i++) {
+                    if (spTable.length <= i)
+                       spTable.push({});
+
+                    try {
+                       spTable[i].allowWriteAccess = (epics.settings["allow write access"] === true);
+                       spTable[i].names = epics.settings.names[i];
+                       spTable[i].description = epics.settings.description[i];
+                       spTable[i].enabled = epics.settings.enabled[i];
+                       spTable[i].group = epics.settings.group[i];
+                       spTable[i].status = epics.settings.status[i];
+                       spTable[i].unit = epics.settings.unit[i];
+                       spTable[i].format = epics.settings.format[i];
+                       spTable[i].incdec = epics.settings.incdec[i];
+                       spTable[i].type = dt_string[epics.settings["device type"][i]];
+                       spTable[i].fileValue = epics.settings.filevalue[i];
+                       spTable[i].history = epics.settings.history[i];
+                       spTable[i].warningThreshold = epics.settings["warning threshold"][i];
+                       spTable[i].selected = false;
+                       spTable[i].lastSelected = false;
+                    } catch (e) {
+                       dlgAlert("Invalid or missing \"/Equipment/EPICS/Settings\" in ODB<br />" +
+                          "Please load a valid beamline configuration file");
+                       return;
+                    }
+
+                    let format = spTable[i].format;
+                    if (format === "")
+                       format = "%f2"; // default format
+
+                    // create new row, install listener and set style
+                    let tr = table.insertRow();
+
+                    tr.id = "spTr";
+                    tr.addEventListener('mousedown', mouseEvent);
+                    tr.addEventListener('mousemove', mouseEvent);
+                    tr.addEventListener('mouseout',   mouseEvent);
+
+                    // catch all mouseup events to stop dragging
+                    document.addEventListener('mouseup',   mouseEvent);
+
+                    tr.style.userSelect = 'none';
+
+                    spTable[i].tr = tr;
+
+                    // dim column if not enabled
+                    if (!spTable[i].enabled)
+                       tr.style.backgroundColor = "#B0B0B0";
+
+                    // index 0..n-1
+                    let td = tr.insertCell();
+                    td.innerHTML = i.toString();
+
+                    // Device
+                    td = tr.insertCell();
+                    td.innerHTML = spTable[i].names;
+
+                    // Description
+                    td = tr.insertCell();
+                    td.style.textAlign = "center";
+                    if (spTable[i].description !== "")
+                       td.innerHTML = spTable[i].description;
+                    else
+                       td.innerHTML = spTable[i].type;
+
+                    // Status
+                    td = tr.insertCell();
+                    td.innerHTML = spTable[i].status;
+
+                    // File Value
+                    td = tr.insertCell();
+                    if (spTable[i].incdec !== 0)
+                       td.innerHTML = "<div class=\"modbvalue\" style=\"text-align: right;\" " +
+                          "data-odb-path=\"/Equipment/EPICS/Settings/Filevalue[" + i + "]\" " +
+                          "data-format=\"" + format + "\"" +
+                          "></div>";
+
+                    // Equal
+                    td = tr.insertCell();
+                    td.style.textAlign = "center";
+                    if (spTable[i].incdec !== 0)
+                       td.innerHTML = "=";
+
+                    // Set value
+                    td = tr.insertCell();
+                    td.style.textAlign = "right";
+                    td.style.whiteSpace = "nowrap";
+                    if (spTable[i].incdec !== 0) {
+
+                       if (epics.settings["allow write access"] === true) {
+                          td.innerHTML = "<div class=\"modbvalue\" style=\"display: inline-block;\" " +
+                                  "data-odb-path=\"/Equipment/EPICS/Variables/Demand[" + i + "]\" " +
+                                  "data-odb-editable='1' " +
+                                  "data-format=\"" + format + "\" " +
+                                  "onchange='changedDemand(" + i + ",this)'" +
+                                  "></div>&nbsp;";
+                          td.innerHTML += "<button onclick='checkIncDec(" + i + "," + spTable[i].incdec + ");'>+</button>";
+                          td.innerHTML += "<button onclick='checkIncDec(" + i + "," + (-spTable[i].incdec) + ");'>-</button>";
+                       } else {
+                          td.innerHTML = "<div class=\"modbvalue\" style=\"display: inline-block;\" " +
+                                  "data-odb-path=\"/Equipment/EPICS/Variables/Demand[" + i + "]\" " +
+                                  "data-format=\"" + format + "\" " +
+                                  "></div>&nbsp;";
+                       }
+                    }
+
+                    // Unit
+                    td = tr.insertCell();
+                    td.style.width = "10px";
+                    if (spTable[i].type !== "Value")
+                       td.innerHTML = spTable[i].unit;
+
+                    // Measured value
+                    td = tr.insertCell();
+                    td.innerHTML = "<div class=\"modbvalue\" style=\"text-align: right;\" " +
+                       "data-odb-path=\"/Equipment/EPICS/Variables/Measured[" + i + "]\" " +
+                       "data-format=\"" + format + "\" " +
+                       "onchange='changedMeasured(" + i + ",this)'" +
+                       "></div>";
+
+                    // Unit
+                    td = tr.insertCell();
+                    td.style.width = "10px";
+                    td.innerHTML = spTable[i].unit;
+
+                    // History button
+                    td = tr.insertCell();
+                    td.style.width = "10px";
+                    td.style.borderRight = "0";
+
+                    let varName = "EPICS:" + spTable[i].names + " Measured," +
+                            "EPICS:" + spTable[i].names + " Demand";
+                    if (spTable[i].history === "1")
+                       td.innerHTML = "<button style=\"padding: 0;\" onclick='hist(\"" + varName +
+                          "\");'><img src='icons/activity.svg' title='Show graph' /></button>";
+                    else if (spTable[i].history.search('/') !== -1)
+                       td.innerHTML = "<button style=\"padding: 0;\" onclick='hist(\"" + spTable[i].history +
+                               "\");'><img src='icons/activity.svg' title='Show graph' /></button>";
+
+                    if (spTable[i].group)
+                       for (d of tr.cells)
+                          d.style.borderTop = "2px solid #808080";
+                 }
+
+                 document.addEventListener('mousedown', removeSelection);
+                 mhttpd_refresh();
+                 check_frontend();
+
+                 // prevent demand values written to ODB for one second
+                 window.setTimeout(() => inInit = false, 1000);
+              });
+   }
+
+   function changedDemand(index, e) {
+      setTableDemand(index, e.value);
+   }
+
+   function changedMeasured(index, e) {
+      spTable[index].measured = e.value;
+
+
+      if (spTable[index].type === 'Beamblocker') {
+         let td = document.getElementById('spTable').childNodes[1].childNodes[4+index].childNodes[6];
+
+         if (spTable[index].allowWriteAccess === false) {
+            td.innerHTML = "";
+         } else {
+            if (spTable[index].measured === 1)
+               td.innerHTML = "<button onclick='bb(" + index + ",0);'>Close</button>";
+            else if (spTable[index].measured === 0)
+               td.innerHTML = "<button onclick='bb(" + index + ",1);'>Open</button>";
+            else
+               td.innerHTML = "";
+         }
+      }
+
+      let td = document.getElementById('spTable').childNodes[1].childNodes[4+index].childNodes[8];
+      if (Math.abs(spTable[index].measured - spTable[index].demandValue) > spTable[index].warningThreshold)
+         td.style.backgroundColor = "var(--mred)";
+      else
+         td.style.backgroundColor = "";
+
+   }
+
+   function bb(index, v) {
+      if (v === 0)
+         dlgConfirm("Are you sure to close the beam blocker?", bbClose, index);
+      else
+         dlgConfirm("Are you sure to open the beam blocker?", bbOpen, index);
+   }
+
+   function bbClose(flag, index) {
+      if (flag === true) {
+         mhttpd_refresh_pause(true);
+         modbset("/Equipment/EPICS/Variables/Demand["+index+"]", 0);
+         mhttpd_refresh_pause(false);
+      }
+   }
+
+   function bbOpen(flag, index) {
+      if (flag === true) {
+         mhttpd_refresh_pause(true);
+         modbset("/Equipment/EPICS/Variables/Demand["+index+"]", 1);
+         mhttpd_refresh_pause(false);
+      }
+   }
+
+   let allowIncDec = false;
+
+   function checkIncDec(index, delta) {
+      let p = { 'index': index, 'delta' : delta };
+
+      if (allowIncDec)
+         doIncDec(true, p);
+      else
+         dlgConfirm("Do you really want to change the value by " + delta + "?<br /><br />" +
+                 "Your decision will be remembered for the remainder of this session.", doIncDec, p);
+   }
+
+   function doIncDec(flag, p) {
+      if (flag !== true)
+         return;
+
+      allowIncDec = true;
+
+      setTableDemand(p.index, spTable[p.index].demandValue + p.delta);
+   }
+
+   function setQueryFileValue(event) {
+      event.stopPropagation();
+      dlgQuery("Enter scaling factor: ", 1, setFileValue, null, 6);
+   }
+
+   function setFileValue(scale) {
+      if (scale === false)
+         return;
+      if (isNaN(scale)) {
+         dlgAlert("Please enter a valid number!", setQueryFileValue);
+         return;
+      }
+
+      mhttpd_refresh_pause(true);
+
+      let n;
+      for (n=0 ; n < spTable.length ; n++)
+         if (spTable[n].selected)
+            break;
+      if (n < spTable.length) {
+         // set selected values
+         for (let i = 0; i < spTable.length; i++) {
+            if (spTable[i].selected) {
+               if (spTable[i].type === "Magnet")
+                  setTableDemand(i, spTable[i].fileValue * scale);
+               else if (spTable[i].incdec !== 0)
+                  setTableDemand(i, spTable[i].fileValue);
+            }
+         }
+      } else {
+         // set all values
+         for (let i = 0; i < spTable.length; i++) {
+            if (spTable[i].type === "Magnet")
+               setTableDemand(i, spTable[i].fileValue * scale);
+            else if (spTable[i].incdec !== 0)
+               setTableDemand(i, spTable[i].fileValue);
+         }
+      }
+      mhttpd_refresh_pause(false);
+   }
+
+   function setMagnetZeroConfirm() {
+      dlgConfirm("Are you sure to set all magnets to zero?", setMagnetZero);
+   }
+
+   function setMagnetZero(flag) {
+      if (flag) {
+         mhttpd_refresh_pause(true);
+         for (let i = 0; i < spTable.length; i++) {
+            if (spTable[i].type === "Magnet") {
+               setTableDemand(i, 0);
+            }
+         }
+         mhttpd_refresh_pause(false);
+      }
+   }
+
+   function setTableDemand(index, value) {
+      let modbValue = document.getElementById('spTable').childNodes[1].childNodes[4+index].childNodes[6].firstChild;
+
+      spTable[index].demandValue = value;
+      modbValue.value = value;
+      modbValue.firstChild.innerHTML = mhttpd_escape(mie_to_string(modbValue.tid, value, modbValue.dataset.format));
+
+
+      if (!inInit)
+         modbValue.sendValueToOdb();
+
+      setEquals();
+   }
+
+   function setEquals() {
+      let t = document.getElementById('spTable');
+      for (let i=0 ; i<spTable.length ; i++) {
+         let comp = t.childNodes[1].childNodes[4+i].childNodes[5];
+         if (spTable[i].incdec !== 0) {
+            if (spTable[i].fileValue === undefined || spTable[i].demandValue === undefined)
+               continue;
+            if (spTable[i].fileValue.toFixed(2) === spTable[i].demandValue.toFixed(2)) {
+               comp.innerHTML = "=";
+               comp.style.backgroundColor = "";
+            } else {
+               comp.innerHTML = "#";
+               comp.style.backgroundColor = "var(--mred)";
+            }
+         }
+      }
+   }
+
+   function saveDemandPicker() {
+      file_picker("msetpoint", "*.json", saveDemand, true, {}, true);
+   }
+
+   function saveDemand(filename) {
+      if (filename === false)
+         return;
+
+      if (filename.indexOf('.json') === -1)
+         filename += '.json';
+
+      let j = {};
+      j.msetPointVersion = mspVersion;
+      j.fileName = filename;
+      j.saveDate = Date().toString();
+
+      j.spTable = [];
+      for (let i=0 ; i<spTable.length ; i++) {
+         j.spTable[i] = {};
+         j.spTable[i].names = spTable[i].names;
+         j.spTable[i].description = spTable[i].description;
+         j.spTable[i].unit = spTable[i].unit;
+         j.spTable[i].type = spTable[i].type;
+         j.spTable[i].demand = spTable[i].demandValue;
+         j.spTable[i].measured = spTable[i].measured;
+      }
+
+      let jsonStr = JSON.stringify(j, null, 3);
+
+
+      file_save_ascii(filename, jsonStr, (filename) =>
+         mjsonrpc_cm_msg("Values saved to file \"" + filename + "\""));
+   }
+
+   function exportDemandQuery() {
+      dlgQuery("Enter filename: ", "default.json", exportDemand);
+   }
+
+   function exportDemand(filename) {
+      if (filename === false)
+         return;
+
+      if (filename.indexOf('.json') === -1)
+         filename += '.json';
+
+      let j = {};
+      j.msetPointVersion = mspVersion;
+      j.fileName = filename;
+      j.saveDate = Date().toString();
+
+      j.spTable = [];
+      for (let i=0 ; i<spTable.length ; i++) {
+         j.spTable[i] = {};
+         j.spTable[i].names = spTable[i].names;
+         j.spTable[i].description = spTable[i].description;
+         j.spTable[i].unit = spTable[i].unit;
+         j.spTable[i].type = spTable[i].type;
+         j.spTable[i].demand = spTable[i].demandValue;
+         j.spTable[i].measured = spTable[i].measured;
+      }
+
+      let jsonStr = JSON.stringify(j, null, 3);
+
+      // use trick from FileSaver.js
+      let a = document.getElementById('downloadHook');
+      if (a === null) {
+         a = document.createElement("a");
+         a.style.display = "none";
+         a.id = "downloadHook";
+         document.body.appendChild(a);
+      }
+
+      let blob = new Blob([jsonStr], {type: "text/json"});
+      let url = window.URL.createObjectURL(blob);
+
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      // dlgAlert("Values downloaded to file \"" + filename + "\"");
+   }
+
+   function loadDemandPicker() {
+      file_picker("msetpoint", "*.json", loadDemand);
+   }
+
+   function loadDemand(filename) {
+      file_load_ascii(filename, (text) => fileInterprete(filename, text) );
+   }
+
+   async function importFile() {
+      // Chrome has file picker, others might have not
+      try {
+         let fileHandle;
+         [fileHandle] = await window.showOpenFilePicker();
+         const file = await fileHandle.getFile();
+         const text = await file.text();
+         fileInterprete(file.name, text);
+      } catch (error) {
+         if (error.name !== 'AbortError') {
+            // fall-back to old method
+            dlgShow('dlgFileSelect', true);
+         }
+      }
+   }
+
+   function importFileFromSelector() {
+
+      let input = document.getElementById('fileSelector');
+      let file = input.files[0];
+      if (file !== undefined) {
+         let reader = new FileReader();
+         reader.readAsText(file);
+
+         reader.onerror = function () {
+            dlgAlert('File read error: ' + reader.error);
+         }
+
+         reader.onload = function () {
+            fileInterprete(file.name, reader.result);
+         }
+      }
+   }
+   function fileInterprete(filename, text) {
+      try {
+         let j = JSON.parse(text);
+
+         if (j.Equipment && j.Equipment.EPICS) {
+            dlgAlert("File \"" + filename + "\" is not a valid beamline <b>settings</b> file.<br /><br />You are probably trying to load a beamline <b>configuration</b> file.");
+            return;
+         } else if (j.spTable === undefined) {
+            dlgAlert("File \"" + filename + "\" is not a valid beamline settings file:<br /><br />No spTable object present");
+            return;
+         }
+         for (const e of j.spTable) {
+            let name = e.names;
+            let demand = e.demand;
+            if (name === undefined || demand === undefined)
+               continue;
+            for (const t of spTable) {
+               if (t.names === name) {
+                  t.fileValue = demand;
+               }
+            }
+         }
+         let a = [];
+         for (const e of spTable)
+            a.push(e.fileValue);
+
+         mhttpd_refresh_pause(true);
+         modbset("/Equipment/EPICS/Settings/Filename Values", filename);
+         modbset("/Equipment/EPICS/Settings/Filevalue", a);
+         setEquals();
+         mhttpd_refresh_pause(false);
+
+         window.setTimeout(mhttpd_refresh, 10);
+
+         mjsonrpc_cm_msg("Values loaded from file \"" + filename + "\"");
+      } catch (error) {
+         dlgAlert("File \"" + filename + "\" is not a valid JSON file:<br /><br />" + error);
+      }
+   }
+
+   function hist(str) {
+      if (str.search('/') !== -1) {
+         let history = str.split('/');
+         mhistory_dialog(history[0], history[1]);
+      } else if (str.search(':') !== -1) {
+         mhistory_dialog_var(str);
+      } else {
+         dlgAlert("History panel must be in the form \"<group>/<panel> or \"0\" or \"1\"\"");
+      }
+   }
+
+   function check_frontend() {
+
+      mjsonrpc_call("cm_exist", {"name": "EPICS Frontend"}).then( function(rpc) {
+         if (rpc.result.status !== 1)
+            document.getElementById("warning").innerHTML =
+               "&nbsp;<a href=\"?cmd=Programs\">EPICS Frontend</a> not running!&nbsp;";
+         else
+            document.getElementById("warning").innerHTML = "";
+         window.setTimeout(check_frontend, 5000);
+      }).catch(function(error){mjsonrpc_error_alert(error);});
+
+   }
+
+   function directCommand() {
+
+      let sel = getSelectedElements();
+      if (sel.length === 0) {
+         dlgAlert("Please select at least one element to send command to");
+         return;
+      }
+
+      let clist = spTable.commands;
+      let buttons = document.getElementById('cmdButtons');
+      if (buttons.innerHTML === '')
+         for (let c in clist) {
+            if (c.includes('/'))
+               continue;
+
+            let name = clist[c + '/name'];
+            let command = clist[c];
+
+            let html = "";
+            html += '<div>';
+            html += '<button class="dlgButton" style="width: 80%" ';
+            html += 'onClick="sendCmd(\'' + command + '\')">' + name + '</button>';
+            html += "</div>";
+
+            buttons.innerHTML += html;
+         }
+
+      dlgShow('dlgDirectCmd');
+   }
+
+   function sendCmd(command) {
+      let elem = '';
+      for (let i=0 ; i<spTable.length ; i++)
+         if (spTable[i].selected) {
+            modbset('/Equipment/EPICS/Settings/Command[' + i + ']', command);
+            elem += spTable[i].names + ", ";
+         }
+
+      if (elem === '') {
+         dlgHide('dlgDirectCmd');
+         dlgAlert('Please select one or more elements to sent this command to');
+         return;
+      }
+
+      dlgHide('dlgDirectCmd');
+
+      elem = elem.slice(0, -2);
+
+      if (elem.indexOf(',') === -1)
+         mjsonrpc_cm_msg("Command \"" + command + "\" sent to device \"" + elem + "\"");
+      else
+         mjsonrpc_cm_msg("Command \"" + command + "\" sent to devices \"" + elem + "\"");
+   }
+
+   function renderSelection() {
+      // change color according to selection
+      for (let i=0 ; i<spTable.length ; i++) {
+         if (spTable[i].selected) {
+            spTable[i].tr.style.backgroundColor = '#004CBD';
+            spTable[i].tr.style.color = '#FFFFFF';
+
+            // change <a> color
+            if (spTable[i].tr.getElementsByTagName('a').length > 0)
+               spTable[i].tr.getElementsByTagName('a')[0].style.color = '#FFFFFF';
+         } else {
+            if (!spTable[i].enabled)
+               spTable[i].tr.style.backgroundColor = "#B0B0B0";
+            else
+               spTable[i].tr.style.backgroundColor = '';
+            spTable[i].tr.style.color = '';
+
+            // change <a> color
+            let a = spTable[i].tr.getElementsByTagName('a');
+            if (a.length > 0) {
+               a = a[0];
+               a.style.color = '';
+            }
+         }
+      }
+   }
+
+   let mouseDragged = false;
+
+   // function gets called from document
+   function removeSelection(e) {
+      // don't de-select if we click on "->"
+      if (e.target.tagName === 'BUTTON')
+         return;
+
+      for (let i = 0; i < spTable.length; i++) {
+         spTable[i].selected = false;
+         spTable[i].lastSelected = false;
+      }
+      renderSelection();
+   }
+
+   function getSelectedElements() {
+      let sel = [];
+      for (let i = 0; i < spTable.length; i++)
+         if (spTable[i].selected)
+            sel.push(i);
+
+      return sel;
+   }
+
+   function mouseEvent(e) {
+
+      // keep off secondary mouse buttons
+      if (e.button !== 0)
+         return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // find current row
+      let index;
+      for (index = 0; index < spTable.length; index++)
+         if (spTable[index].tr === e.target ||
+            spTable[index].tr.contains(e.target))
+            break;
+      if (index === spTable.length)
+         index = undefined;
+
+      // ignore clicks to <button>'a and <a>'s
+      if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.tagName === 'IMG')
+         return;
+
+      if (e.type === 'mousedown') {
+         mouseDragged = true;
+
+         if (e.shiftKey) {
+
+            // search last selected element
+            let i1;
+            for (i1 = 0 ; i1 < spTable.length ; i1++)
+               if (spTable[i1].lastSelected)
+                  break;
+            if (i1 === spTable.length)
+               i1 = 0; // none selected, so use first one
+
+            if (i1 > index)
+               [i1, index] = [index, i1];
+
+            for (let i=i1 ; i<= index ; i++)
+               spTable[i].selected = true;
+
+         } else if (e.metaKey || e.ctrlKey) {
+
+            // just toggle current selection
+            spTable[index].selected = !spTable[index].selected;
+
+            // remember which row was last selected
+            for (let i=0 ; i<spTable.length ; i++)
+               spTable[i].lastSelected = false;
+            if (spTable[index].selected)
+               spTable[index].lastSelected = true;
+
+         } else {
+            // no key pressed -> un-select all but current
+            for (let i = 0; i < spTable.length; i++) {
+               spTable[i].selected = false;
+               spTable[i].lastSelected = false;
+            }
+
+            spTable[index].selected = true;
+            spTable[index].lastSelected = true;
+         }
+
+         renderSelection();
+      }
+
+      if (e.type === 'mousemove' && mouseDragged) {
+
+         // unselect all
+         for (let i = 0; i < spTable.length; i++)
+            spTable[i].selected = false;
+
+         // current row
+         let i2;
+         for (i2 = 0; i2 < spTable.length; i2++)
+            if (spTable[i2].tr === e.target ||
+                spTable[i2].tr.contains(e.target))
+               break;
+
+         if (i2 < spTable.length) {
+            // search last selected element
+            let i1;
+            for (i1 = 0 ; i1 < spTable.length ; i1++)
+               if (spTable[i1].lastSelected)
+                  break;
+            if (i1 === spTable.length)
+               i1 = 0; // none selected, so use first one
+
+            if (i1 > i2)
+               [i1, i2] = [i2, i1];
+
+            for (let i=i1 ; i<= i2 ; i++)
+               spTable[i].selected = true;
+
+            renderSelection();
+         }
+      }
+
+      if (e.type === 'mouseup')
+         mouseDragged = false;
+
+   }
+</script>
+</body>
+</html>

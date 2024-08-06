@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html class="mcss">
+  <head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+    <link rel="stylesheet" href="midas.css">
+    <script src="midas.js"></script>
+    <script src="mhttpd.js"></script>
+    <script src="controls.js"></script>
+    <script src="filesrw.js"></script>
+    <script src="sequencer_v1.js"></script>
+    <script>
+      /*
+       Notes:
+       When I pause during a WAIT command it actually pauses the line but not the clock!
+      */
+
+    </script>
+    <title>Sequencer</title>
+  </head>
+  <body class="mcss" onload="mhttpd_init('Sequencer');">
+    <!-- header and side navigation will be filled in mhttpd_start -->
+    <div id="mheader"></div>
+    <div id="msidenav"></div>
+    <div id="mmain">
+      <table id="seqTable" class="mtable" style="border-spacing: 0px;">       
+        <tr>
+          <th  colspan="4" class="mtableheader">Sequencer</th>
+        </tr>
+        <tr hidden>
+        </tr>
+        <tr>
+          <td style="width: 2.9em;">
+            <span class="dropdown" style="float:left;">
+              <button style="" class="dropbtn">☰</button>
+              <div class="dropdown-content">
+                <div>
+                  <input type="checkbox" id="scrollToCurr" onchange="scrollToCurr(this);">
+                  <span class="modb" data-odb-path="/Sequencer/State/SCurrent line number" onchange="hlLine(this.value);seqState();"></span>
+                  <label for="scrollToCurr">&nbsp;Follow current line&nbsp;</label>
+                </div>
+                <div>
+                  <input type="checkbox" checked id="showParTable" onchange="showParTable('parContainer');">
+                  <label for="showParTable">&nbsp&nbsp;Show variables&nbsp;</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="darkMode" onchange="lightToDark(this);"/><label for="darkMode">&nbsp;Dark mode&nbsp;</label>
+                </div>
+                <a target="_blank" href="https://midas.triumf.ca/MidasWiki/index.php/Sequencer">Syntax Help</a>
+              </div>
+            </span>
+          </td>
+          <td colspan="3">
+            <!-- all possible buttons. Class indicates in which state they appear -->
+	    <input class="mbutton seqbtn Stopped" id="loadSeq" type="button" value="Load" onclick="seqLoad();">
+	    <input class="mbutton seqbtn Stopped" id="startSeq" type="button" value="Start" onclick="startSeq();">
+	    <input class="mbutton seqbtn Stopped" id="debugSeq" type="button" value="Debug" onclick="debugSeq();">
+	    <input class="mbutton seqbtn Running Paused" id="stopSeq" type="button" value="Stop" onclick="dlgConfirm('Are you sure you want to stop sequence?',stopSeq);">
+	    <input class="mbutton seqbtn Running" id="pauseSeq" type="button" value="Pause" onclick="modbset('/Sequencer/Command/Pause script',true);">
+	    <input class="mbutton seqbtn Paused" id="resumeSeq" type="button" value="Resume" onclick="modbset('/Sequencer/Command/Resume script',true);">
+            <input class="mbutton seqbtn Running Paused" id="stepOver" type="button" value="Step over" onclick="modbset('/Sequencer/Command/Step over',true);" style="width: auto;">
+            <input class="mbutton seqbtn Running Paused" id="stopAfter" type="button" value="Stop after current run" onclick="modbset('/Sequencer/Command/Stop after run',true);" style="width: auto;">
+	    <input class="mbutton seqbtn Stopped" id="editSeq" type="button" value="Edit" onclick="editCurrentSeq('mslCurrent');updateBtns('Editing');">
+	    <input class="mbutton seqbtn Editing" id="saveSeqAs" type="button" value="Save as ..." onclick="seqSave('');" title="Save Alt+S">
+	    <input class="mbutton seqbtn Editing" id="saveSeq" type="button" value="Save" onclick="seqSave();" title="Save Crtl+S">
+	    <input class="mbutton seqbtn Editing" id="cancelEdit" type="button" value="Cancel" onclick="load_msl();updateBtns('Stopped');">
+            <!--Monitor state to update buttons, message etc.-->
+            <span class="modb" data-odb-path="/Sequencer/State/Running" onchange="showParTable('parContainer');seqState(updateBtns);"></span>
+            <span class="modb" data-odb-path="/Sequencer/State/Finished" onchange="seqState(updateBtns);"></span>
+            <span class="modb" data-odb-path="/Sequencer/State/Paused" onchange="seqState(updateBtns);"></span>
+            <span class="modb" data-odb-path="/Sequencer/State/Message" onchange="mslMessage(this.value);"></span>
+            <span class="modb" data-odb-path="/Sequencer/Script/Lines" onchange="load_msl();"></span>
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+	  <td style="width: 10%;">File&nbsp;name:</td>
+          <td id="filename">
+            <span class="modbvalue" data-odb-path="/Sequencer/Command/Load filename" onchange="load_msl();"></span>
+            <span style="color: var(--mred);font-size:1.5em;" id="filechanged"></span>
+            <span class="modb" data-odb-path="/Sequencer/State/SFilename" onload="if (this.value === '') this.style.display = 'none';" onchange="if (this.value === '') {this.style.display = 'none';}else{this.style.display = 'inline-block';this.innerText = '(' + this.value.split('userfiles/sequencer/')[1] + ')';}"></span>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+	  <td>Status:</td>
+          <td>
+            <span id="seqState" onchange="console.log(this.innerText);" style="padding: 2px 10px 2px 10px;border-radius:5px;"></span>
+          </td>
+          <td>
+            <!-- triggers for wait and loop below this row -->
+            <span id="waitTrig" class="modb" data-odb-path="/Sequencer/State/Wait limit" onload="extraRows(this);" onchange="extraRows(this);" ></span>
+            <span id="loopTrig" class="modb" data-odb-path="/Sequencer/State/Loop n[0]" onload="extraRows(this);" onchange="extraRows(this);"></span>
+          </td>
+        </tr>
+        <tr style="display: none;background: var(--mred);text-align: center;" id="seqError">
+          <td colspan="4">
+            <span class="modbvalue" data-odb-path="/Sequencer/State/Error" onchange="checkError(this);"></span>
+            <span class="modb" data-odb-path="/Sequencer/State/SError line" onchange="hlLine(this.value,'var(--mred)');"></span>
+          </td>
+        </tr>
+        <tr style="display: none;" id="parContainer">
+        </tr>
+        <tr>
+          <td style="background-color: #f0f0f0;" id="mslControl" colspan="4">
+            <span class="msl_msg"></span>
+            <span class="msl_err"></span>
+            <span class="msl_fatal"></span>
+            <pre id="lineNumbers" class="msl_linenum"></pre>
+            <pre id="mslCurrent" class="msl_area" spellcheck="false" contenteditable="false"></pre>
+          </td>
+        </tr>
+      </table>
+      <script>
+        // Check whether the sequencer is running
+        checkSequencer();
+        // Check possible wrong path
+        mjsonrpc_db_get_values(["/Sequencer/State/Path"]).then(function(rpc) {
+           let path = rpc.result.data[0];
+           if (path && path.includes("userfiles/sequencer")) {
+              dlgAlert('The path in /Sequencer/State/Path should be relative to (exp)/userfiles/sequencer.<br>Please make sure you set the correct path.<br>/Sequencer/State/Path = <span class="modbvalue" data-odb-path="/Sequencer/State/Path" data-odb-editable="1"></span>');
+           }
+        }).catch(function (error) {
+           mjsonrpc_error_alert(error);
+        });
+
+        // Check background color
+        let lToDcheck = document.getElementById("darkMode");
+        if (localStorage.getItem("darkMode")) {
+           lToDcheck.checked = localStorage.getItem("darkMode");
+        }
+        lightToDark(lToDcheck);
+
+        // Check follow current line
+        let scrToCurr = document.getElementById("scrollToCurr");
+        if (localStorage.getItem("scrollToCurr")) {
+           scrToCurr.checked = localStorage.getItem("scrollToCurr");
+        }
+
+        // Adjust buttons
+        seqState(updateBtns);
+        window.addEventListener("resize", windowResize);
+
+        // Check whether a sequence is running and adjust variables accordingly
+        let showParTablecheck = document.getElementById("showParTable");
+        if (localStorage.getItem("showParTable")) {
+           showParTablecheck.checked = localStorage.getItem("showParTable");
+        }
+        mjsonrpc_db_get_values(["/Sequencer/State/Running"]).then(function(rpc) {
+           if (rpc.result.data[0] &&  showParTablecheck.checked) {
+              showParTable('parContainer');
+           }
+        }).catch (function (error) {
+           console.error(error);
+        });
+
+
+        const lineNumbers = document.getElementById("lineNumbers");
+        const mslCurrent = document.getElementById("mslCurrent");
+        const seqTable = document.getElementById("seqTable");
+        const m = document.getElementById("mmain");
+        
+        // Synchronize the scroll position of lineNumbers with mslCurrent
+        const observer = new MutationObserver((mutations) => {
+           //updateLineNumbers();
+        });
+        const config = { childList: true };
+        observer.observe(mslCurrent, config);
+        mslCurrent.addEventListener('scroll', function() {
+           lineNumbers.scrollTop = mslCurrent.scrollTop;
+        });
+
+        // adjust size when resizing modal
+        const resizeObs = new ResizeObserver(() => {
+           lineNumbers.style.height = mslCurrent.style.height;
+           seqTable.style.width = m.getBoundingClientRect().width - 10 + "px";
+        });
+        resizeObs.observe(mslCurrent);
+        windowResize();
+      </script>
+    </div>
+  </body>
+</html>

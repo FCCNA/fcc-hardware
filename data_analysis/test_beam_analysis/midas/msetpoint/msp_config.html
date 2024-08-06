@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="filesrw.js"></script>
+   <title>Example</title>
+
+   <style>
+      .mtable td {
+          padding: 2px;
+      }
+      .mtable th {
+          padding: 5px;
+          text-align: left;
+      }
+   </style>
+</head>
+
+<body class="mcss" onload="mhttpd_init('MSPConfig');msetpointConfig_init();">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table id="spTable" class="mtable">
+      <tr>
+         <td colspan="16" style="padding: 5px">
+            <div style="margin-top: 5px;display: inline-block;">
+            Title: <span class="modbvalue" data-odb-editable="1"
+                         data-odb-path="/Experiment/Name"></span>
+            &nbsp;&nbsp;Filename: <span class="modbvalue" data-odb-editable="1"
+                            data-odb-path="/Equipment/EPICS/Settings/Filename Config"></span>
+            &nbsp;&nbsp;EPICS Gateway: <span class="modbvalue" data-odb-editable="1"
+                 data-odb-path="/Equipment/EPICS/Settings/EPICS Gateway"></span>
+            </div>
+            <span style="float: right">
+               <button class="dlgButton" onclick="saveConfigPicker();">Save</button>
+               <button class="dlgButton" onclick="loadConfigPicker();">Load</button>
+               <button class="dlgButton" onclick="exportQueryConfig();">Export</button>
+               <button class="dlgButton" onclick="importConfigFile();">Import</button>
+            </span>
+         </td>
+      </tr>
+      <tr>
+         <th class="mtableheader" name="idConfig" style="display: none">
+            Config
+         </th>
+         <th class="mtableheader">
+            <img src="icons/settings.svg" title="Configure Devices" onclick="config()" style="vertical-align: middle">
+         </th>
+         <th class="mtableheader" title="Element name shown in the table">
+            Name
+         </th>
+         <th class="mtableheader" title="Optional description which overwrites the element type">
+            Description
+         </th>
+         <th class="mtableheader" title="Element is enabled">
+            Enabled
+         </th>
+         <th class="mtableheader" title="If checked starts a new group">
+            Group
+         </th>
+         <th class="mtableheader">
+            Type
+         </th>
+         <th class="mtableheader">
+            Unit
+         </th>
+         <th class="mtableheader" title="Number format for this value">
+            <a href="https://daq00.triumf.ca/MidasWiki/index.php/Custom_Page#Formatting" target="_blank">Format</a>
+         </th>
+         <th class="mtableheader" title="Increment / decrement values use for the +/- buttons">
+            +/-
+         </th>
+         <th class="mtableheader" title="Threshold for which the measured value box turns red">
+            Warning thr.
+         </th>
+         <th class="mtableheader" title="EPICS Process Variable name">
+            PV name
+         </th>
+         <th class="mtableheader">
+            Set
+         </th>
+         <th class="mtableheader">
+            Get
+         </th>
+         <th class="mtableheader">
+            Status
+         </th>
+         <th class="mtableheader">
+            Command
+         </th>
+         <th class="mtableheader" title="Optional reference to a history panel">
+            History
+         </th>
+      </tr>
+
+   </table>
+</div>
+
+<!-- Select file dialog -->
+<div id="dlgFileSelect" class="dlgFrame">
+   <div class="dlgTitlebar">Select file</div>
+   <div class="dlgPanel">
+      <br />
+      <div style="margin: auto;width: 70%">
+         <input type="file" id="fileSelector" accept=".json">
+      </div>
+      <br /><br />
+      <button class="dlgButton" onclick="importFileFromSelector(this.parentNode.parentNode);dlgHide('dlgFileSelect');">Load</button>
+      <button class="dlgButton" onclick="dlgHide('dlgFileSelect')">Cancel</button>
+   </div>
+</div>
+
+<script>
+
+   let spVersion = "0.9";
+
+   // device types, must match epic_fe.cxx:DT_xxx
+   let dt_string = [ "", "Magnet", "Beamblocker", "PSA", "Separator", "Slit", "Value" ];
+
+   function addModbValue(tr, ic, odbName, i) {
+      let td = tr.cells[ic] === undefined ? tr.insertCell() : tr.cells[ic];
+      td.innerHTML = "<div class=\"modbvalue\" style=\"text-align: right;\" " +
+         "data-odb-path=\"/Equipment/EPICS/Settings/" + odbName + "[" + i + "]\" " +
+         "data-odb-editable='1'></div>";
+   }
+
+   function msetpointConfig_init(flagConfig) {
+      db_get_value('/Equipment/EPICS',
+              rpc => {
+                 let epics = rpc.result.data[0];
+                 if (epics === null) {
+                    dlgAlert('/Equipment/EPICS not present in ODB<br />' +
+                       'Please click on the <b>Load</b> button to load a beamline configuration');
+                 } else {
+                    let table = document.getElementById('spTable');
+
+                    if (!Array.isArray(epics.settings.names)) {
+                       // convert single values to arrays
+                       for (d of devList) {
+                          d = d.toLowerCase();
+                          let a = new Array();
+                          a.push(epics.settings[d]);
+                          epics.settings[d] = a;
+                       }
+                    }
+
+                    for (let i = 0; i < epics.settings.names.length; i++) {
+
+                       let tr = table.rows[2+i] === undefined ? table.insertRow() : table.rows[2+i];
+
+                       let ic = 0;
+                       let td = tr.cells[ic] === undefined ? tr.insertCell() : tr.cells[ic];
+
+                       td.innerHTML = '<img src="icons/plus-square.svg" title="Add element after this" ' +
+                               'onclick="elemAdd(' + i +')">';
+                       td.innerHTML += '<img src="icons/minus-square.svg" title="Delete this element" ' +
+                               'onclick="elemRemove(' + i +')">';
+                       if (i > 0)
+                          td.innerHTML += '<img src="icons/arrow-up.svg" title="Move element up" ' +
+                             'onclick="elemUp(' + i +')">';
+                       if (i < epics.settings.names.length - 1)
+                          td.innerHTML += '<img src="icons/arrow-down.svg" title="Move element down"" ' +
+                             'onclick="elemDown(' + i +')">';
+
+                       td.setAttribute("name", "idConfig");
+                       td.style.display = 'none';
+                       td.style.whiteSpace = 'nowrap';
+
+                       td = tr.cells[++ic] === undefined ? tr.insertCell() : tr.cells[ic];
+                       td.innerHTML = i.toString();
+
+                       addModbValue(tr, ++ic, "Names", i);
+                       addModbValue(tr, ++ic, "Description", i);
+
+                       td = tr.cells[++ic] === undefined ? tr.insertCell() : tr.cells[ic];
+                       td.innerHTML = "<input type=\"checkbox\" class=\"modbcheckbox\" " +
+                               "data-odb-path=\"/Equipment/EPICS/Settings/Enabled[" + i + "]\" " +
+                               "data-odb-editable='1' " +
+                               "></input>";
+                       td.style.textAlign = "center";
+
+                       td = tr.cells[++ic] === undefined ? tr.insertCell() : tr.cells[ic];
+                       td.innerHTML = "<input type=\"checkbox\" class=\"modbcheckbox\" " +
+                          "data-odb-path=\"/Equipment/EPICS/Settings/Group[" + i + "]\" " +
+                          "data-odb-editable='1' " +
+                          "></input>";
+                       td.style.textAlign = "center";
+
+                       td = tr.cells[++ic] === undefined ? tr.insertCell() : tr.cells[ic];
+                       let html = "<select class=\"modbselect\" " +
+                          "data-odb-path=\"/Equipment/EPICS/Settings/Device type[" + i + "]\">\n";
+                       for (let i=1 ; i<dt_string.length ; i++)
+                          html +="  <option value='" + i +"'>" + dt_string[i] + "</option>";
+                       html += "</select>";
+                       td.innerHTML = html;
+
+                       addModbValue(tr, ++ic, "Unit", i);
+                       addModbValue(tr, ++ic, "Format", i);
+                       addModbValue(tr, ++ic, "Incdec", i);
+                       addModbValue(tr, ++ic, "Warning Threshold", i);
+                       addModbValue(tr, ++ic, "CA Name", i);
+                       addModbValue(tr, ++ic, "CA Demand", i);
+                       addModbValue(tr, ++ic, "CA Measured", i);
+                       addModbValue(tr, ++ic, "CA Status", i);
+                       addModbValue(tr, ++ic, "CA Command", i);
+                       addModbValue(tr, ++ic, "History", i);
+                    }
+
+                    if (flagConfig === true)
+                       config(true);
+
+                    if (table.rows.length - 2 > epics.settings.names.length)
+                       table.deleteRow(table.rows.length - 1);
+
+                    mhttpd_refresh();
+                 }
+              });
+   }
+
+   function saveConfigPicker() {
+      file_picker("msetpoint", "*.json", saveConfig, true, {}, true);
+   }
+
+   function compose_json(filename, data) {
+      let header = {
+         "/MIDAS version": "2.1",
+         "/filename": filename,
+         "/ODB path": "/"
+      }
+      header = JSON.stringify(header, null, '   ');
+      header = header.substring(0, header.length - 2) + ',\n'; // strip trailing '}'
+
+      let name = {};
+      name["Experiment"] = data[0];
+      let jsonName = JSON.stringify(name, null, '   ');
+      jsonName = jsonName.slice(1, -2) + ',\n'; // strip leading '{' and last '}', add ','
+
+      let settings = {};
+      settings["Equipment"] = {};
+      settings.Equipment["EPICS"] = {};
+      settings.Equipment.EPICS["Settings"] = data[1];
+      let jsonSettings = JSON.stringify(settings, null, '   ');
+      jsonSettings = jsonSettings.slice(1, -2) + '\n}\n'; // strip leading '{' and last '}', add last '}'
+
+      return header + jsonName + jsonSettings;
+   }
+
+   function saveConfig(filename) {
+      if (filename === false)
+         return;
+
+      if (filename.indexOf('.json') === -1)
+         filename += '.json';
+
+      mjsonrpc_db_copy(["/Experiment/Name", "/Equipment/EPICS/Settings", "/History/Display/EPICS"]).then(rpc => {
+
+         let json = compose_json(filename, rpc.result.data);
+
+         file_save_ascii(filename, json, "MSetPoint configuration saved to file \"" + filename + "\"");
+
+      }).catch(error => mjsonrpc_error_alert(error));
+
+   }
+
+   function exportQueryConfig() {
+      dlgQuery("Enter filename: ", "default.json", exportConfig);
+   }
+
+   function exportConfig(filename) {
+      if (filename === false)
+         return;
+
+      if (filename.indexOf('.json') === -1)
+         filename += '.json';
+
+      mjsonrpc_db_copy(["/Experiment/Name", "/Equipment/EPICS/Settings"]).then(rpc => {
+
+         let json = compose_json(filename, rpc.result.data);
+
+         // use trick from FileSaver.js
+         let a = document.getElementById('downloadHook');
+         if (a === null) {
+            a = document.createElement("a");
+            a.style.display = "none";
+            a.id = "downloadHook";
+            document.body.appendChild(a);
+         }
+
+         let blob = new Blob([json], {type: "text/json"});
+         let url = window.URL.createObjectURL(blob);
+
+         a.href = url;
+         a.download = filename;
+         a.click();
+         window.URL.revokeObjectURL(url);
+         dlgAlert("MSetPoint configuration saved to file \"" + filename + "\"");
+
+      }).catch(error => mjsonrpc_error_alert(error));
+
+   }
+
+   function loadConfigPicker() {
+      file_picker("msetpoint", "*.json", loadConfig);
+   }
+
+   function loadConfig(filename) {
+      file_load_ascii(filename, (text) => fileInterprete(filename, text));
+   }
+
+   async function importConfigFile() {
+      // Chrome has file picker, others might have not
+      try {
+         let fileHandle;
+         [fileHandle] = await window.showOpenFilePicker();
+         const file = await fileHandle.getFile();
+         const text = await file.text();
+         fileInterprete(file.name, text);
+      } catch (error) {
+         if (error.name !== 'AbortError') {
+            // fall-back to old method
+            dlgShow('dlgFileSelect', true);
+         }
+      }
+   }
+
+   function importFileFromSelector() {
+
+      let input = document.getElementById('fileSelector');
+      let file = input.files[0];
+      if (file !== undefined) {
+         let reader = new FileReader();
+         reader.readAsText(file);
+
+         reader.onerror = function () {
+            dlgAlert('File read error: ' + reader.error);
+         }
+
+         reader.onload = function () {
+            fileInterprete(file.name, reader.result);
+         }
+      }
+   }
+
+   function fileInterprete(filename, text) {
+      try {
+         let json = JSON.parse(text);
+
+         if (json.spTable) {
+            dlgAlert("File \"" + filename + "\" is not a valid beamline <b>configuration</b> file.<br /><br />You are probably trying to load a beamline <b>settings</b> file.");
+            return;
+         }
+         else if (json.Equipment === undefined || json.Equipment.EPICS === undefined) {
+            dlgAlert("File \"" + filename + "\" does not contain an EPICS equipment");
+            return;
+         }
+
+         mjsonrpc_db_get_value('/Experiment/Name').then( rpc => {
+
+            let oldExpName = rpc.result.data[0];
+
+            mjsonrpc_db_delete(["/Equipment/EPICS/Settings"]).then(rpc => {
+               modbset("/", json);
+               variables_init(json.Equipment.EPICS.Settings.Names.length);
+
+               if (oldExpName.substring(0, 9) !== 'MSetPoint')
+                  modbset('/Experiment/Name', oldExpName);
+
+               dlgAlert("MSetPoint configuration loaded from file \"" + filename + "\"", pageReload);
+            });
+
+         });
+      } catch (error) {
+         dlgAlert("File \"" + filename + "\" is not a valid JSON file:<br /><br />" + error);
+      }
+   }
+
+   function variables_init(l) {
+      let e = {};
+      e.Variables = {};
+      e.Variables["Filevalue"] = new Array(l).fill(0);
+      e.Variables["Filevalue/key"] = { "type": 9, "num_values": l, "access_mode": 7, "last_written": 0 };
+      e.Variables["Demand"] = new Array(l).fill(0);
+      e.Variables["Demand/key"] = { "type": 9, "num_values": l, "access_mode": 7, "last_written": 0 };
+      e.Variables["Measured"] = new Array(l).fill(0);
+      e.Variables["Measured/key"] = { "type": 9, "num_values": l, "access_mode": 7, "last_written": 0 };
+
+      modbset("/Equipment/EPICS", e);
+   }
+
+   function pageReload() {
+      window.location.reload();
+   }
+
+   function doConfig(flag) {
+
+      let conf = document.getElementsByName("idConfig");
+      for (let c of conf) {
+         if (flag === true || c.style.display === "none")
+            c.style.display = "";
+         else
+            c.style.display = "none";
+      }
+   }
+
+   function config(flag) {
+
+      mjsonrpc_call("cm_exist", {"name": "EPICS Frontend"}).then( function(rpc) {
+         if (rpc.result.status !== 1)
+            doConfig(flag);
+         else
+            dlgAlert("Please stop EPICS Frontend before changing elements");
+      });
+
+   }
+
+   let devList = [
+      "Names", "CA Name", "CA Demand", "CA Measured", "CA Status", "CA Command",
+      "Device type", "Unit", "Format", "Description", "Enabled", "Group", "Status", "Incdec",
+      "History", "Update Threshold Measured", "Warning Threshold",
+      "Filevalue", "Command"
+   ];
+
+   function elemAdd(index) {
+      mjsonrpc_db_copy(["/Equipment/EPICS/Settings"]).then(rpc => {
+
+         let settings = rpc.result.data[0];
+
+         if (!Array.isArray(settings['Names'])) {
+            // convert single values to arrays
+            for (d of devList) {
+               let a = new Array();
+               a.push(settings[d]);
+               settings[d] = a;
+            }
+         }
+
+         for (d of devList)
+            settings[d].splice(index, 0, settings[d][index]);
+
+         mjsonrpc_db_paste(["/Equipment/EPICS/Settings"], [settings]).then (rpc => {
+            msetpointConfig_init(true);
+         });
+      });
+   }
+
+   function elemRemove(index) {
+      mjsonrpc_db_copy(["/Equipment/EPICS/Settings"]).then(rpc => {
+
+         let settings = rpc.result.data[0];
+
+         if (!Array.isArray(settings['Names'])) {
+            dlgAlert("You cannot remove the last element");
+            return;
+         }
+
+         for (d of devList)
+            settings[d].splice(index, 1);
+
+         mjsonrpc_db_paste(["/Equipment/EPICS/Settings"], [settings]).then (rpc => {
+
+            let elem = [];
+            let size = [];
+            let n = settings["Names"].length;
+
+            for (d of devList) {
+               elem.push("/Equipment/EPICS/Settings/" + d);
+               size.push(n);
+            }
+
+            mjsonrpc_db_resize(elem, size).then (rpc => {
+               msetpointConfig_init(true);
+            });
+         });
+      });
+   }
+
+   function elemUp(index) {
+      if (index === 0)
+         return;
+
+      mjsonrpc_db_copy(["/Equipment/EPICS/Settings"]).then(rpc => {
+
+         let settings = rpc.result.data[0];
+
+         for (d of devList)
+            [settings[d][index], settings[d][index-1]] = [settings[d][index-1], settings[d][index]];
+
+         mjsonrpc_db_paste(["/Equipment/EPICS/Settings"], [settings]).then (rpc => {
+            msetpointConfig_init(true);
+         });
+      });
+   }
+
+   function elemDown(index) {
+
+      mjsonrpc_db_copy(["/Equipment/EPICS/Settings"]).then(rpc => {
+
+         let settings = rpc.result.data[0];
+
+         if (index === settings["Names"].length - 1)
+            return;
+
+         for (d of devList)
+            [settings[d][index], settings[d][index+1]] = [settings[d][index+1], settings[d][index]];
+
+         mjsonrpc_db_paste(["/Equipment/EPICS/Settings"], [settings]).then (rpc => {
+            msetpointConfig_init(true);
+         });
+      });
+   }
+
+</script>
+</body>
+</html>

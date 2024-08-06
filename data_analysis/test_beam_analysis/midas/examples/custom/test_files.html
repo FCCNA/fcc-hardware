@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html class="mcss">
+  <head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.7">
+    <link rel="stylesheet" href="midas.css">
+    <link rel="stylesheet" href="mhttpd.css">
+    <script src="midas.js"></script>
+    <script src="mhttpd.js"></script>
+    <script src="mhistory.js"></script>
+    <script src="controls.js"></script>
+    <script src="filesrw.js"></script>
+    <script>
+      function dblclick_load(filename) {
+	 let editor = document.getElementById("editor");
+
+	 file_load_ascii(filename, function(text) {
+	    editor.innerText = text;
+	 });
+	 // Close dlg modal cleanly
+	 sessionStorage.removeItem("depthDir");
+      }
+      
+      function dblclick_save(filename) {
+
+	 console.log("dblclick save as",filename);
+	 let editor = document.getElementById("editor");
+	 let text = editor.innerText;
+	 // Close dlg modal cleanly
+	 sessionStorage.removeItem("depthDir");
+	 // Send text to save
+	 file_save_ascii(filename,text)
+      }
+
+    </script>
+    <title>File browser test</title>
+  </head>
+  <body class="mcss" onload="mhttpd_init('test');">
+    <!-- header and side navigation will be filled in mhttpd_start -->
+    <!-- header and side navigation will be filled in mhttpd_start -->
+    <div id="mheader"></div>
+    <div id="msidenav"></div>
+    <div id="mmain">
+      <div>
+        <input class="mbutton" type="button" value="Select Load" onclick="file_browser('','*.*',dblclick_load);" style="float:left;width:100px;">
+        <input class="mbutton" id="saveLAR" type="button" value="Select Save" onclick="file_browser('autoRun','*.*',dblclick_save,true);" style="float:left;width:100px;">
+        <input class="mbutton" type="button" value="Table Load" onclick="file_picker('autoRun','*.*',dblclick_load);" style="float:right;width:100px;">
+        <input class="mbutton" id="saveLAR" type="button" value="Table Save" onclick="file_picker('autoRun','*.*',dblclick_save,true);" style="float:right;width:100px;">	
+      </div><br><br><br><br>
+      <center><div>
+	  <pre style="width:80%;height:300px;background-color:gray;text-align: left;" contenteditable="true" id="editor">test text</pre>
+      </div></center>
+    </div>
+  </body>
+</html>

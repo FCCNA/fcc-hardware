@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <title>Edit script</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Sequencer')">
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table class="mtable" style="width: 100%;">
+      <tbody>
+      <tr>
+         <th class="mtableheader"><span id=prg_name>prg_name</span> script editor</th>
+      </tr>
+      <tr align="center">
+        <td align="center">
+          <button class="mbutton" onclick='save_script()' id="save_button">Save script</button>
+          <button class="mbutton" onclick='save_script_as()' id="save_as_button">Save script as ...</button>
+          <button class="mbutton" onclick='cancel()'>Cancel</button>
+          <a target="_blank" href="https://midas.triumf.ca/MidasWiki/index.php/Sequencer">Syntax Help</a>
+        </td>
+      </tr>
+      <tr>
+        <td>Directory: <span id="msg_directory">msg_directory</span></td>
+      </tr>
+      <tr>
+        <td>Filename: <span id="msg_filename">msg_filename</span></td>
+      </tr>
+      <tr>
+        <td>
+          <textarea rows=100 id="edit_area" style="font-family:monospace;font-size:medium;width:99%;">
+text_area
+          </textarea>
+        </td>
+      </tr>
+      </tbody>
+   </table>
+</div>
+<div id="dlgError" class="dlgFrame">
+  <div class="dlgTitlebar">Error message</div>
+  <div class="dlgPanel">
+    <div id="dlgErrorText">Dialog Contents</div>
+    <br />
+    <button class="dlgButton" onClick="dlgHide('dlgError')">Close</button>
+  </div>
+</div>
+
+<script>
+  var seq_name; // undefined
+  var odb_path = "/Sequencer";
+  var prg_name = "Sequencer";
+
+  seq_name = mhttpd_getParameterByName("seq_name");
+
+  if (seq_name) {
+      odb_path = "/Sequencer" + seq_name;
+      prg_name = "Sequencer" + seq_name;
+  }
+
+  //console.log("seq_name: " + seq_name + ", odb_path: " + odb_path + ", prg_name: " + prg_name);
+
+  set_if_changed("prg_name", prg_name);
+
+function set_if_changed(id, value)
+{
+   var e = document.getElementById(id);
+   if (e) {
+      if (e.innerHTML != value) {
+         e.innerHTML = value;
+      }
+   }
+}
+
+function save(filename, script) {
+   //console.log("save: filename: " + filename + ", script: " + script);
+
+   var paths = [];
+   var values = [];
+   paths.push(odb_path+"/Command/Load filename");
+   values.push(filename);
+   paths.push(odb_path+"/Command/Load new file");
+   values.push(true);
+
+   var req = [
+      mjsonrpc_make_request("seq_save_script", {"filename":filename,"script":script}),
+   ];
+   mjsonrpc_send_request(req).then(function (rpc) {
+      //mjsonrpc_debug_alert(rpc);
+      if (rpc[0].result.status != 1) {
+         throw new Error("Cannot save sequencer file, error: " + rpc[0].result.error);
+      }
+      var req = [
+         mjsonrpc_make_request("db_paste", {"paths": paths, "values": values}),
+      ];
+      mjsonrpc_send_request(req).then(function (rpc) {
+      //mjsonrpc_debug_alert(rpc);
+         for (var i = 0; i < rpc[0].result.status.length; i++) {
+            if (rpc[0].result.status[i] != 1) {
+               throw new Error("Cannot write ODB \'" + paths[i] + "\', status " + rpc[0].result.status[i] + ", see MIDAS messages");
+            }
+         }
+	 if (seq_name)
+             mhttpd_goto_page("sequencer&seq_name="+encodeURIComponent(seq_name));
+	 else
+             mhttpd_goto_page("sequencer");
+         // DOES NOT RETURN
+      }).catch(function (error) {
+         document.getElementById("dlgErrorText").innerHTML = mjsonrpc_decode_error(error);
+         dlgShow('dlgError');
+         //mjsonrpc_error_alert(error);
+      });
+   }).catch(function (error) {
+      document.getElementById("dlgErrorText").innerHTML = mjsonrpc_decode_error(error);
+      dlgShow('dlgError');
+      //mjsonrpc_error_alert(error);
+   });
+}
+
+function save_script() {
+   var t = document.getElementById("edit_area");
+   var script = t.value;
+
+   //console.log("script: " + script);
+
+   var f = document.getElementById("msg_filename");
+   var filename = f.innerHTML;
+
+   //console.log("filename: " + filename);
+
+   save(filename, script);
+}
+
+function save_script_as() {
+   var t = document.getElementById("edit_area");
+   var script = t.value;
+
+   //console.log("script: " + script);
+
+   var f = document.getElementById("msg_filename");
+   var filename = f.innerHTML;
+   //var filename = window.prompt("Please enter the new file name:", f.innerHTML);
+
+   dlgQuery("Save script as...", filename, function(value, param) {
+      //console.log("value [" + value + "] param [" + param + "]");
+
+      if (value === false) { // cancel
+          return;
+      }
+
+      save(value, param);
+   }, script);
+}
+
+function cancel() {
+    if (seq_name)
+	mhttpd_goto_page("sequencer&seq_name="+encodeURIComponent(seq_name));
+    else
+	mhttpd_goto_page("sequencer");
+}
+
+function callback(rpc) {
+   var path = rpc[0].result.data[0];
+   var filename = rpc[0].result.data[1];
+   var lines = rpc[0].result.data[2];
+
+   if (path) {
+      set_if_changed("msg_directory", path);
+   }
+   
+   if (filename) {
+      set_if_changed("msg_filename", filename);
+   } else {
+      set_if_changed("msg_filename", "new.msl");
+   }
+
+   if (lines) {
+      var text = lines.join("\n");
+      set_if_changed("edit_area", text);
+   } else {
+      var text = `COMMENT "new sequence"
+
+RUNDESCRIPTION "new sequence"
+
+LOOP 2
+  TRANSITION start
+  WAIT seconds, 3
+  TRANSITION stop
+ENDLOOP
+`;
+      set_if_changed("edit_area", text);
+   }
+}
+
+function update() {
+   var paths = [
+      odb_path+"/State/Path",
+      odb_path+"/State/Filename",
+      odb_path+"/Script/Lines",
+   ];
+   var req = [
+      mjsonrpc_make_request("db_get_values", {"paths":paths}),
+   ];
+   mjsonrpc_send_request(req).then(function (rpc) {
+      callback(rpc);
+   }).catch(function (error) {
+      document.getElementById("dlgErrorText").innerHTML = mjsonrpc_decode_error(error);
+      dlgShow('dlgError');
+      //alert("RWE: RPC or JS error: " + mjsonrpc_decode_error(error));
+   });
+}
+
+update();
+</script>
+</body>
+</html>

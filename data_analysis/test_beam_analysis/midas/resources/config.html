@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <title>Config</title>
+   <style>
+    td {
+      padding: 5px;
+    }
+   </style>
+</head>
+<body class="mcss" onload="mhttpd_init('Config'); config_init();">
+
+<script>
+
+   function load_voices() {
+      let s = document.getElementById("speakVoice");
+      if (s.length > 0)
+         return; // new loaded voice can re-trigger this function
+
+      let voices = speechSynthesis.getVoices();
+      voices = voices.filter(function (v) { return v.lang === "en-US"; });
+      for (let i = 0; i < voices.length; i++) {
+         let o = document.createElement('option');
+         o.text = voices[i].name;
+         s.add(o);
+      }
+
+      s.value = mhttpdConfig().speakVoice;
+
+      // if configured voice not available, use first one
+      if (s.value === "") {
+         s.value = voices[0].name;
+         mhttpdConfigSet('speakVoice', s.value);
+      }
+
+      s.addEventListener('change', function () {
+         mhttpdConfigSet('speakVoice', this.value);
+         let u = new SpeechSynthesisUtterance('The speed synthesis has been changed to voice ' + this.value);
+         u.voice = speechSynthesis.getVoices().filter(function (v) {
+            return v.name === this.value;
+         }, this)[0];
+         u.volume = parseFloat(mhttpdConfig().speakVolume);
+         speechSynthesis.speak(u);
+      });
+   }
+
+   function config_init() {
+      mhttpdConfigODB(config_init_callback);
+   }
+
+   function enableNotifications(flag) {
+      if (flag) {
+         if (!("Notification" in window)) {
+            alert("This browser does not support desktop notifications");
+         } else if (Notification.permission === "granted") {
+            const n = new Notification("MIDAS", {
+               body: "Notifications enabled",
+               icon: "./apple-touch-icon.png" });
+         } else if (Notification.permission !== "denied") {
+            Notification.requestPermission().then((p) => {
+               if (p === "granted") {
+                  const n = new Notification("MIDAS", {
+                     body: "Notifications enabled",
+                     icon: "./apple-touch-icon.png"
+                  });
+               }
+            });
+         }
+      }
+   }
+   function config_init_callback() {
+      let config = mhttpdConfig();
+      let input = document.getElementsByTagName('input');
+      for (let i = 0; i < input.length; i++) {
+         if (input[i].type === 'checkbox') {
+            input[i].checked = config[input[i].id];
+            input[i].addEventListener('change', function () {
+               mhttpdConfigSet(this.id, this.checked);
+            });
+            if (input[i].id.substring(0, 6) === 'notify') {
+               input[i].addEventListener('change', function () {
+                  enableNotifications(input[i].checked);
+               });
+            }
+         }
+         if (input[i].type === 'radio') {
+            if (input[i].id === 'timezoneLocal')
+               input[i].checked = (config['timezone'] === 'local');
+            if (input[i].id === 'timezoneServer')
+               input[i].checked = (config['timezone'] === 'server');
+            input[i].addEventListener('change', function () {
+               mhttpdConfigSet('timezone', this.value);
+               document.getElementById('timezoneSpecific').selectedIndex = 0;
+            });
+         }
+         if (input[i].type === 'text') {
+            input[i].value = config[input[i].id];
+            input[i].addEventListener('change', function () {
+               if (this.dataset.minValue !== undefined)
+                  if (parseFloat(this.value) < parseFloat(this.dataset.minValue))
+                     this.value = this.dataset.minValue;
+               if (this.dataset.maxValue !== undefined)
+                  if (parseFloat(this.value) > parseFloat(this.dataset.maxValue))
+                     this.value = this.dataset.maxValue;
+               mhttpdConfigSet(this.id, this.value);
+            });
+         }
+      }
+      let sliders = document.getElementsByName('ctrlHSlider');
+      for (let i = 0; i < sliders.length; i++) {
+         sliders[i].set(parseFloat(config[sliders[i].id]).toFixed(2));
+      }
+
+      let s = document.getElementById("alarmSoundFile");
+      s.value = config.alarmSoundFile.slice(0, -4);
+      s.addEventListener('change', function () {
+         mhttpdConfigSet('alarmSoundFile', this.value + ".mp3");
+         let audio = new Audio(this.value + ".mp3");
+         audio.volume = parseFloat(mhttpdConfig().alarmVolume);
+         audio.play();
+      });
+
+      let tz = document.getElementById('timezoneSpecific');
+      tz.value = config.timezone;
+      tz.addEventListener('change', function() {
+         mhttpdConfigSet('timezone', this.value);
+         document.getElementById('timezoneLocal').checked = false;
+         document.getElementById('timezoneServer').checked = false;
+      });
+
+      let fs = document.getElementById('fontSize');
+      if (config.fontSize === undefined)
+         fs.value = 10;
+      else
+         fs.value = config.fontSize;
+      fs.addEventListener('change', function() {
+         mhttpdConfigSet('fontSize', this.value);
+         window.location.reload();
+      });
+
+      if (speechSynthesis.getVoices().length > 0)
+         load_voices();
+      else
+         window.speechSynthesis.onvoiceschanged = load_voices;
+   }
+
+   function speakVolumeUpdate(value, final) {
+      if (final) {
+         mhttpdConfigSet('speakVolume', value);
+
+         let u = new SpeechSynthesisUtterance('The voice volume has been changed');
+         u.voice = speechSynthesis.getVoices().filter(function (v) { return v.name === mhttpdConfig().speakVoice; }, this)[0];
+         u.volume = value;
+         speechSynthesis.speak(u);
+
+      }
+   }
+
+   function alarmVolumeUpdate(value, final) {
+      if (final) {
+         mhttpdConfigSet('alarmVolume', value.toFixed(2));
+         let audio = new Audio(mhttpdConfig().alarmSoundFile);
+         audio.volume = mhttpdConfig().alarmVolume;
+         audio.play();
+      }
+   }
+
+</script>
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table class="mtable">
+      <tr>
+         <th colspan="5" class="mtableheader">Config</th>
+      </tr>
+
+      <tr>
+         <td>
+         </td>
+         <td style="width: 100px; text-align: center">
+            Display in "Messages" page
+         </td>
+         <td style="width: 100px; text-align: center">
+            Display in header
+         </td>
+         <td style="width: 100px; text-align: center">
+            Speak
+         </td>
+         <td style="width: 100px; text-align: center">
+            Show browser notification
+         </td>
+      </tr>
+
+      <tr>
+         <td>
+            "CHAT" messages:
+         </td>
+         <td>
+         </td>
+         <td>
+            <input type="checkbox" id="displayChat">
+         </td>
+         <td>
+            <input type="checkbox" id="speakChat">
+         </td>
+         <td>
+            <input type="checkbox" id="notifyChat">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            "TALK" messages:
+         </td>
+         <td>
+            <input type="checkbox" id="pageTalk">
+         </td>
+         <td>
+            <input type="checkbox" id="displayTalk">
+         </td>
+         <td>
+            <input type="checkbox" id="speakTalk">
+         </td>
+         <td>
+            <input type="checkbox" id="notifyTalk">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            "ERROR" messages:
+         </td>
+         <td>
+            <input type="checkbox" id="pageError">
+         </td>
+         <td>
+            <input type="checkbox" id="displayError">
+         </td>
+         <td>
+            <input type="checkbox" id="speakError">
+         </td>
+         <td>
+            <input type="checkbox" id="notifyError">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            "INFO" messages:
+         </td>
+         <td>
+            <input type="checkbox" id="pageInfo">
+         </td>
+         <td>
+            <input type="checkbox" id="displayInfo">
+         </td>
+         <td>
+            <input type="checkbox" id="speakInfo">
+         </td>
+         <td>
+            <input type="checkbox" id="notifyInfo">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            "LOG" messages:
+         </td>
+         <td>
+            <input type="checkbox" id="pageLog">
+         </td>
+         <td>
+            <input type="checkbox" id="displayLog">
+         </td>
+         <td>
+            <input type="checkbox" id="speakLog">
+         </td>
+         <td>
+            <input type="checkbox" id="notifyLog">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            Voice:
+         </td>
+         <td colspan="4">
+            <select id="speakVoice">
+            </select>
+         </td>
+      </tr>
+      <tr>
+         <td>
+            Speak volume:
+         </td>
+         <td colspan="4">
+            <table>
+               <tr>
+                  <td style="padding: 5px;">0</td>
+                  <td style="padding: 0;"><button name="ctrlHSlider" type="button" id="speakVolume" class="ctrlHSlider" style="display: inline-block;" data-update="speakVolumeUpdate()"></button></td>
+                  <td style="padding: 5px;">MAX</td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+
+      <tr>
+         <td colspan="5" style="background-color: #A0A0A0; height:2px; padding: 0;"></td>
+      </tr>
+      <tr>
+         <td colspan="4" style="background-color: #A0A0A0; height:0; padding: 0;"></td>
+      </tr>
+
+      <tr>
+         <td>
+            Enable alarm sound:
+         </td>
+         <td colspan="4">
+            <input type="checkbox" id="alarmSound">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            Alarm repetition rate [s]:
+         </td>
+         <td colspan="4">
+            <input type="text" size="5" id="alarmRepeat" data-min-value="10" data-max-value="3600">
+         </td>
+      </tr>
+      <tr>
+         <td>
+            Alarm sound:
+         </td>
+         <td colspan="4">
+            <select id="alarmSoundFile">
+               <option>beep</option>
+               <option>bell</option>
+               <option>bleep</option>
+               <option>chime</option>
+               <option>temple</option>
+               <option>watch</option>
+               <option>woop</option>
+            </select>
+         </td>
+      </tr>
+      <tr>
+         <td>
+            Alarm volume:
+         </td>
+         <td colspan="4">
+            <table>
+               <tr>
+                  <td style="padding: 5px;">0</td>
+                  <td style="padding: 0;"><button name="ctrlHSlider" type="button" id="alarmVolume" class="ctrlHSlider" style="display: inline-block;" data-update="alarmVolumeUpdate()"></button></td>
+                  <td style="padding: 5px;">MAX</td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+
+      <tr>
+         <td colspan="5" style="background-color: #A0A0A0; height:2px; padding: 0;"></td>
+      </tr>
+
+      <tr>
+         <td>
+            Time zone:</br>
+            <small>Used for status bar and history time axis</small>
+         </td>
+         <td>
+            <input type="radio" id="timezoneLocal" name="timezone" value="local">
+            <label for="timezoneLocal">Local</label>
+         </td>
+         <td>
+            <input type="radio" id="timezoneServer" name="timezone" value="server">
+            <label for="timezoneServer">Server</label>
+         </td>
+         <td colspan="2">
+            <select id="timezoneSpecific">
+               <option value=""></option>
+               <option value="-12">UTC-12:00</option>
+               <option value="-11">UTC-11:00</option>
+               <option value="-10">UTC-10:00</option>
+               <option value="-9">UTC-09:00</option>
+               <option value="-8">UTC-08:00</option>
+               <option value="-7">UTC-07:00</option>
+               <option value="-6">UTC-06:00</option>
+               <option value="-5">UTC-05:00</option>
+               <option value="-4">UTC-04:00</option>
+               <option value="-3">UTC-03:00</option>
+               <option value="-2">UTC-02:00</option>
+               <option value="-1">UTC-01:00</option>
+               <option value="0">UTC</option>
+               <option value="+1">UTC+01:00</option>
+               <option value="+2">UTC+02:00</option>
+               <option value="+3">UTC+03:00</option>
+               <option value="+4">UTC+04:00</option>
+               <option value="+5">UTC+05:00</option>
+               <option value="+6">UTC+06:00</option>
+               <option value="+7">UTC+07:00</option>
+               <option value="+8">UTC+08:00</option>
+               <option value="+9">UTC+09:00</option>
+               <option value="+10">UTC+10:00</option>
+               <option value="+11">UTC+11:00</option>
+               <option value="+12">UTC+12:00</option>
+            </select>
+         </td>
+
+      </tr>
+
+      <tr>
+         <td colspan="5" style="background-color: #A0A0A0; height:2px; padding: 0;"></td>
+      </tr>
+
+      <tr>
+         <td colspan="5" style="background-color: #A0A0A0; height:0; padding: 0;"></td>
+      </tr>
+
+      <tr>
+         <td>
+            Font size:
+         </td>
+         <td colspan="4">
+            <select id="fontSize">
+               <option value="8">8 Pt</option>
+               <option value="9">9 Pt</option>
+               <option value="10">10 Pt</option>
+               <option value="11">11 Pt</option>
+               <option value="12">12 Pt</option>
+               <option value="13">13 Pt</option>
+               <option value="14">14 Pt</option>
+               <option value="15">15 Pt</option>
+               <option value="16">16 Pt</option>
+            </select>
+         </td>
+      </tr>
+
+      <tr>
+         <td colspan="5" style="text-align: center;">
+           <button class="mbutton" onclick="mhttpd_alarm_play_now();">Play test sound</button>
+           <button class="mbutton" onclick="mhttpd_speak_now('test test 1 2 3');">Speak test message</button>
+           <button class="mbutton" onclick="mhttpdConfigSetAll(mhttpd_config_defaults);config_init();">Reset defaults</button>
+         </td>
+      </tr>
+
+   </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <title>Event Dump</title>
+   <style>
+       .select {
+           padding: 6px;
+           background-color: #E0E0E0;
+       }
+
+      .eheader {
+          width: 100%;
+          font-family: verdana, tahoma, sans-serif;
+      }
+
+      table.eheader {
+          border-collapse: collapse;
+      }
+
+      table.eheader td {
+          border: 1px solid white;
+          padding: 4px;
+      }
+
+      table.data {
+          border: none;
+          border-collapse: collapse;
+      }
+
+      table.data td {
+          border: 1px solid white;
+      }
+
+      table.data th {
+          font-family: verdana, tahoma, sans-serif;
+          background-color: #8BBDFF;
+          color: white;
+          border: 1px solid white;
+          padding: 4px;
+      }
+
+      table.data td {
+          font-family: Courier, monospace;
+          padding: 4px;
+      }
+
+   </style>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Event Dump'); event_dump_init()">
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table class="mtable" style="width: 100%;">
+      <tr>
+         <td class="mtableheader">Event Selection</td>
+      </tr>
+      <tr>
+         <td class="select">
+            <button class="mbutton" onclick="next()">Next event</button>
+            <!--- <button class="mbutton" onclick="previous()">Previous</button> --->
+            <button class="mbutton" id="runbutton" onclick="run()">Run</button>
+            &nbsp;&nbsp;&nbsp;<input type="checkbox" id="get_recent" checked>
+            <label for="recent">Show only recent events</label>
+         </td>
+      </tr>
+      <tr>
+         <td class="select">
+            <label for="buffer_name">Buffer:</label>
+            <select id="buffer_name">
+            </select>
+            &nbsp;&nbsp;&nbsp;
+            <label for="event_id">Event ID:</label>
+            <select id="event_id_x" onchange="select_event_id()">
+            </select>
+            <input type="text" id="event_id" size="6" value="-1"></input>
+            &nbsp;&nbsp;&nbsp;
+            Trigger mask:
+            <input type="text" id="trigger_mask" size="6" value="-1"></input>
+            &nbsp;
+         </td>
+      </tr>
+      <tr>
+         <td align=center><span id="status">status</span></td>
+      </tr>
+      <tr>
+         <td class="mtableheader" id="event_header">Event dump</td>
+      </tr>
+      <tr>
+         <td id="dump"></td>
+      </tr>
+   </table>
+
+</div>
+
+<script>
+
+   // Globals ------------------
+   let update_timer_id;
+   let run_flag = false;
+   //let recent_events = false;
+
+   function next() {
+      update();
+   }
+
+   //function previous() {
+   //   dlgAlert("Not yet implemented");
+   //}
+
+   function run() {
+      if (run_flag) {
+         clearTimeout(update_timer_id);
+         run_flag = false;
+         document.getElementById("runbutton").innerHTML = "Run";
+      } else {
+         run_flag = true;
+         document.getElementById("runbutton").innerHTML = "Pause";
+         update();
+      }
+   }
+
+   //function recent() {
+   //   recent_events = !recent_events;
+   //   dlgAlert("Not yet implemented");
+   //}
+
+   function select_event_id() {
+      let v = document.getElementById("event_id_x").value;
+      //console.log("selected: " + v);
+      let e = document.getElementById("event_id");
+      e.value = parseInt(v);
+   }
+
+   function set_if_changed(e, v) {
+      if (e.innerHTML !== v)
+         e.innerHTML = v;
+   }
+
+   function expand() {
+      drawEvent(lastEvent, true);
+   }
+
+   let lastEvent;
+
+   function callback(rpc) {
+      let e = document.getElementById("status");
+      if (rpc.result) {
+         let status = rpc.result.status;
+         if (status === 209) {
+            set_if_changed(e, "Waiting for next event...");
+         } else {
+            set_if_changed(e, "No data, status = " + status);
+         }
+         return false;
+      }
+
+      set_if_changed(e, "");
+
+      let event = bkToObj(rpc);
+      lastEvent = event;
+      drawEvent(event, false);
+      return true;
+   }
+
+   function drawEvent(o, expand) {
+      // print event header
+      set_if_changed(document.getElementById("event_header"), "Event #" + o.serial_number);
+
+      let d = "";
+      d += "<table class='eheader'>";
+      d += "<tr>";
+      d += "<td>Event&nbsp;ID: " + o.event_id + "</td>"
+      d += "<td>Trigger&nbsp;Mask: " + o.trigger_mask + "&nbsp;/&nbsp;0x" + o.trigger_mask.toString(16) + "</td>"
+      d += "<td>Serial&nbsp;Number: " + o.serial_number + "</td>"
+      d += "<td>Size&nbsp;[Bytes]: " + o.data_size + "&nbsp;/&nbsp;0x" + o.data_size.toString(16) + "</td>"
+      d += "<td>Time&nbsp;stamp: " + o.time_stamp_date.toLocaleString() + "</td>"
+      d += "</tr>";
+      d += "</table>";
+
+      // print banks
+      d += "<table class='data' style='width: 100%'>";
+      for (let index=0 ; index<o.bank.length ; index++) {
+
+         let b = o.bank[index];
+
+         // bank header
+         d += "<tr>";
+         d += "<th>Bank:&nbsp;<b>" + b.name + "</b></th>"
+         d += "<th>Size&nbsp;[Bytes]:&nbsp;" + b.size + "&nbsp;/&nbsp;0x" + b.size.toString(16) + "</th>"
+         d += "<th>Type:&nbsp;" + tid_name[b.type] + "</th>"
+         d += "</tr>";
+
+         let rows = Math.floor((b.size-1)/ 16) + 1;
+         let row;
+         for (row=0 ; row <  rows ; row++) {
+            if (row === 16 && !expand)
+               break;
+
+            d += "<tr>";
+
+            // address part
+            d += "<td>";
+            if (o.banks_16bit)
+               d += "0x" + (row*16).toString(16).padStart(4, "0");
+            else
+               d += "0x" + (row*16).toString(16).padStart(8, "0");
+            d += "</td>";
+
+            // hex part
+            d += "<td>";
+            for (let i = 0; i < 16 && row*16 + i < b.hexdata.length; i++)
+               d += "0x" + b.hexdata[row*16 + i].toString(16).padStart(2, "0") + " ";
+            d += "</td>";
+
+            // data specific part
+            d += "<td>";
+            if (b.type === TID_UINT8 || b.type === TID_INT8 || b.type == TID_CHAR) {
+               for (let i = 0; i < 16 && row*16 + i < b.hexdata.length; i++) {
+                  let c = b.hexdata[row*16 + i];
+                  d += (c < 32 || c > 128) ? "." : "&#" + c + ";";
+               }
+            } else if (b.type === TID_UINT16 || b.type === TID_INT16) {
+               for (let i = 0; i < 8 && row*16 + i*2 < b.size; i++)
+                  d += "0x" + b.array[row*8 + i].toString(16).padStart(4, "0") + " ";
+            } else if (b.type === TID_UINT32 || b.type === TID_INT32) {
+               for (let i = 0; i < 4 && row*16 + i*4 < b.size; i++)
+                  d += "0x" + b.array[row*4 + i].toString(16).padStart(8, "0") + " ";
+            } else if (b.type === TID_UINT64 || b.type === TID_INT64) {
+               for (let i = 0; i < 2 && row*16 + i*8 < b.size; i++)
+                  d += "0x" + b.array[row*2 + i].toString(16).padStart(16, "0") + " ";
+            } else if (b.type === TID_FLOAT) {
+               for (let i = 0; i < 4 && row*16 + i*4 < b.size; i++) {
+                  let s = b.array[row*4 + i].toString();
+                  d += parseFloat(s) + " ";
+               }
+            } else if (b.type === TID_DOUBLE) {
+               for (let i = 0; i < 2 && row*16 + i*8 < b.size; i++)
+                  d += b.array[row*2 + i].toString() + " ";
+            }
+            d += "</td>";
+
+            d += "</tr>";
+         }
+
+         if (row < rows) {
+            d += "<tr><td colspan='3' style='text-align: center;'>";
+            d += "<a href='#' onclick='expand()'>... more data (";
+            d += rows-row;
+            d += " rows)...</a>";
+            d += "</td></tr>";
+         }
+      }
+
+      d += "</table>"; // overall data table
+
+      set_if_changed(document.getElementById("dump"), d);
+   }
+
+   function update() {
+      clearTimeout(update_timer_id);
+      let buffer_name = document.getElementById("buffer_name").value;
+      let event_id = parseInt(document.getElementById("event_id").value);
+      let trigger_mask = parseInt(document.getElementById("trigger_mask").value);
+      let get_recent = document.getElementById("get_recent").checked;
+      let last_event_header = [];
+      if (lastEvent) {
+         last_event_header = [lastEvent.event_id,lastEvent.trigger_mask,lastEvent.serial_number,lastEvent.time_stamp];
+      }
+      //console.log("bm_receive_event: buffer: " + buffer_name + ", event_id: " + event_id + ", trigger_mask: " + trigger_mask + ", get_recent: " + get_recent + ", last_event_header: " + last_event_header);
+      mjsonrpc_call("bm_receive_event", {"buffer_name":buffer_name,"event_id":event_id,"trigger_mask":trigger_mask,"get_recent":get_recent,"last_event_header":last_event_header}, "arraybuffer").then(function (rpc) {
+         let success = callback(rpc);
+         if (run_flag || !success)
+            update_timer_id = setTimeout('update()', 1000);
+      }).catch(function (error) {
+         mjsonrpc_error_alert(error);
+      });
+   }
+
+   function event_dump_init() {
+      // retrieve buffer names from ODB
+      mjsonrpc_db_ls(["/Experiment/Buffer sizes", "/Equipment"]).then(function(rpc) {
+
+         // populate buffer names
+         let a = rpc.result.data[0];
+         for (const b in a) {
+            if (b.indexOf("/") !== -1)
+               continue;
+            if (b === "SYSMSG")
+               continue;
+            document.getElementById("buffer_name").add(new Option(b));
+         }
+         document.getElementById("buffer_name").value = "SYSTEM";
+
+         // populate event IDs
+         a = rpc.result.data[1];
+         let eq_odb = [];
+         let eq_name = [];
+         //let eq_id = [];
+
+         for (const e in a) {
+            if (e.indexOf("/") !== -1)
+               continue;
+
+            eq_odb.push("/Equipment/" + e + "/Common/Event ID");
+            eq_name.push(e);
+         }
+         mjsonrpc_db_get_values(eq_odb).then(function(rpc) {
+
+            //eq_id.push(Number(-1));
+            document.getElementById("event_id_x").add(new Option("-1 : ALL"));
+
+            for (let i=0 ; i<rpc.result.data.length ; i++) {
+               //   eq_id.push(Number(rpc.result.data[i]));
+               let event_id = Number(rpc.result.data[i]);
+               document.getElementById("event_id_x").add(new Option(event_id + " : " + eq_name[i]));
+            }
+
+            update();
+
+         }).catch(function(error) {
+            mjsonrpc_error_alert(error);
+         })
+
+      }).catch(function(error) {
+         mjsonrpc_error_alert(error);
+      });
+   }
+</script>
+</body>
+</html>

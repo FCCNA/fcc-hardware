@@ -1,0 +1,370 @@
+/*----------------------------------------------------------
+   CSS formatting for midas web pages
+   this css does not contaminate generic html formatting
+-----------------------------------------------------------*/
+
+/* required global settings */
+
+body.mcss {
+   margin: 0;     /* navigation bar matches window edges */
+
+   /* common settings: fonts, colors, etc */
+   font-family: verdana,tahoma,sans-serif;
+   font-size: 10pt;
+}
+
+/* use for high-contrast display of text */
+
+.mtext {
+   background-color: white;
+   foreground-color: black;
+}
+
+:root {
+   --mgray: #B0B0B0;
+   --mred: #ff9ca6;
+   --myellow: #fff58b;
+   --mgreen: #a0ffb8;
+   --mblue: #91d6ff;
+   --morange: #ffc585;
+}
+
+.mgray {
+   background-color: var(--mgray);
+}
+
+.mred {
+   background-color: var(--mred);
+}
+
+.myellow {
+   background-color: var(--myellow);
+}
+
+.mgreen {
+   background-color: var(--mgreen);
+}
+
+.mblue {
+   background-color: var(--mblue);
+}
+
+.morange {
+   background-color: var(--morange);
+}
+
+.mbox {
+   border-radius: 5px;
+}
+
+/* equipment status, set by frontends */
+
+.greenLight{
+   background-color: var(--mgreen);
+}
+
+.yellowLight{
+   background-color: var(--myellow);
+}
+
+.yellowGreenLight{
+   background: linear-gradient(45deg, var(--mgreen) 25%, var(--myellow) 25%,
+   var(--myellow) 50%, var(--mgreen) 50%,
+   var(--mgreen) 75%, var(--myellow) 75%,
+   var(--myellow));
+   background-size: 50px 50px;
+}
+
+.redLight{
+   background-color: var(--mred);
+}
+
+#mheader {
+   position: fixed;
+   top: 0;
+   left: 0;
+   z-index: 2; /* above side navigation */
+   width: 100%;
+   box-sizing: border-box;
+   background-color: #f2f2f2;
+   border-bottom: 1px solid #D0D0D0;
+   color: #404040;
+   font-family: verdana,tahoma,sans-serif;
+   font-size: 120%;
+   text-align: center;
+   padding: 5px;
+   padding-left: 0;
+   display: block;
+   line-height: 1;
+}
+
+#mheader_error {
+   position: fixed;
+   top: 0;
+   left: 0;
+   z-index: 0;
+   width: 100%;
+   background-color: red;
+   color: white;
+   font-family: verdana,tahoma,sans-serif;
+   font-size: 120%;
+   text-align: center;
+   padding: 5px;
+   padding-left: 0;
+   display: block;
+   line-height: 1;
+}
+
+#mheader_message {
+   display: none;
+   color: #404040;
+   background-color: #D0D0D0;
+   border-radius: 10px;
+   padding: 2px;
+   padding-left: 10px;
+   padding-right: 10px;
+}
+
+#mheader_alarm {
+   display: inline-block;
+   margin-right: 20px;
+   border-radius: 10px;
+   padding: 2px;
+   padding-left: 10px;
+   padding-right: 10px;
+}
+
+#msidenav {
+   height: 100%;
+   position: fixed;
+   z-index: 1;
+   left: 0;
+   overflow-x: hidden;
+   background-color: #f2f2f2;
+   color: #404040;
+   font-family: verdana,tahoma,sans-serif;
+   font-size: 100%;
+   padding: 0;
+}
+
+.mmenuitem {
+   text-align:left;
+   line-height: 1;
+}
+
+.mmenuitem {
+   text-align:left;
+   line-height: 1;
+}
+
+.mmenuitemsel {
+   background-color: #d0e0e0;
+}
+
+.mmenulink {
+   padding: 5px;
+   padding-right: 16px;
+   text-align: left;
+}
+
+.mseparator {
+   height: 2px;
+   background-color: #A0A0A0;
+}
+
+#mmain {
+   display: block;
+   opacity: 0; /* pre-hidden */
+   position: relative;
+   z-index: 0;
+   padding-top: 32px; /* normal header height */
+}
+
+.mnav {
+   background: linear-gradient(to bottom, #e9e9e9 0%,#b7b7b7 100%);
+}
+
+.mnav table{
+   margin-left: auto;
+   margin-right: auto;
+}
+
+.mnav td{
+   border: 0;
+}
+
+.mnav input{
+   padding: 0.25em;
+   padding-left: 0.5em;
+   padding-right: 0.5em;
+}
+
+.mmsgService{
+	background-color: #C0C0C0;
+	border-radius: 12px;
+   padding: 1em;
+}
+
+a.hideButton{
+    text-decoration : none; 
+    color : #5F88A3;
+}
+
+/* generic midas button */
+
+.mbutton {
+   border: 1px solid #808080;
+   border-radius: 5px;
+   font-size: 100%;
+   margin: 2px;
+}
+
+/* all navigation buttons */
+
+input.mnav {
+   border: 1px solid #808080;
+   border-radius: 5px;
+   color: #444444;
+   background: linear-gradient(to bottom, #f5f5f5 0%,#c0c0c0 100%);
+   font-size: 100%;
+   margin: 2px;
+}
+
+.mbutton:enabled {
+   color: #444444;
+   background: linear-gradient(to bottom, #f5f5f5 0%,#c0c0c0 100%);
+}
+
+/* selected navigation button */
+
+input.mnavsel {
+   color: #F8F8F8;
+   background: linear-gradient(to bottom, #676767 0%,#999999 100%);
+}
+
+/* colors for hovered buttons */
+input.mnav:hover, .mbutton:hover:enabled {
+   color: #404040;
+   background: linear-gradient(to bottom,  #ffffff 0%,#f3f3f3 50%,#ededed 51%,#ffffff 100%);
+}
+
+input.mnavsel:hover {
+   color: #F8F8F8;
+   background: linear-gradient(to bottom,  #404040 0%, #808080 100%);
+}
+
+/* input box, overwrites default HTML formatting */
+input[type=text] {
+   font-size: 100%;
+}
+
+/* drop-down selector */
+select {
+   font-size: 100%;
+}
+
+/* table formatting */
+
+.mtable {
+   background-color: #FFFFFF;
+   border: 2px solid #6bb28c;
+   border-radius: 12px;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 0.5em;
+   margin-bottom: 0.5em;
+   padding: 3px;
+}
+
+.mmessagebox {
+   margin: 0;
+   border: 2px solid #00B26B;
+   border-radius: 12px;
+   padding: 0;
+   overflow: scroll;
+   text-align: left;
+}
+
+.mmessagebox p:nth-child(odd){
+   background-color: #DDDDDD;
+}
+
+.mmessagebox p:nth-child(even){
+   background-color: #FFFFFF;
+}
+
+.mmessageline {
+   font-family: Lucida Console, Fixed, Monospace;
+   white-space: pre-wrap;
+   line-height: 1.5em;
+   margin: 0;
+   padding-left: 10px;
+   padding-right: 10px;
+}
+
+.mtable tr:nth-child(odd) {
+   background-color: #DDDDDD;
+}
+
+.mtable tr:nth-child(even) {
+   background-color: #EEEEEE;
+}
+
+.mtableheader {
+   font-size: 120%;
+   font-weight: bold;
+   border-radius: 12px;
+   background-color: #8cbdff;
+   color: #f8f8f8;
+   margin: 0.1em;
+   padding: 0.25em;
+   text-align: center;
+}
+
+.mtabletitle {
+   padding: 0.25em;
+}
+
+/* "Example" page */
+
+.mmaintable {
+   background-color: #F5F5F5;
+   border: 2px solid #6bb28c;
+   border-radius: 12px;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 0.5em;
+   margin-bottom: 0.5em;
+   padding: 3px;
+}
+
+/* link colors */
+
+.mcss a:link { color:#0000FF; text-decoration:none }
+.mcss a:visited { color:#800080; text-decoration:none }
+.mcss a:hover { color:#0000FF; text-decoration:underline }
+.mcss a:active { color:#0000FF; text-decoration:underline }
+.mcss a:focus { color:#0000FF; text-decoration:none }
+
+/* link colors for left side navigation bar */
+
+.mmenuitem:hover, .mmenuitem:focus, .msubmenuitem:hover, msubmenuitem:focus {
+   background-color: #C0D0D0;
+   color: #404040;
+   cursor: pointer;
+}
+
+a.mmenulink:hover, a.mmenulink:focus {
+   text-decoration: none;
+   width: 100%;
+   display: inline-block;
+}
+
+a.mmenulink:link, a.mmenulink:visited {
+   text-decoration: none;
+   color: #404040;
+   width: 100%;
+   display: inline-block;
+}
+
+/* end */

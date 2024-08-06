@@ -1,0 +1,5 @@
+https://feathericons.com/
+
+Size: 20px
+Stroke width: 2px
+Color: #606060

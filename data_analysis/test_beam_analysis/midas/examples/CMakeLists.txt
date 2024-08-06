@@ -1,0 +1,7 @@
+add_subdirectory(experiment)
+add_subdirectory(eventbuilder)
+add_subdirectory(epics)
+add_subdirectory(slowcont)
+add_subdirectory(mtfe)
+add_subdirectory(lowlevel)
+add_subdirectory(odbxx)

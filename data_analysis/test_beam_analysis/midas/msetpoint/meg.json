@@ -1,0 +1,342 @@
+{
+   "msetPointVersion": "0.9",
+   "fileName": "meg.json",
+   "saveDate": "Mon Aug 14 2023 12:25:37 GMT+0200 (Central European Summer Time)",
+   "spTable": [
+      {
+         "names": "AHSW41",
+         "description": "",
+         "unit": "A",
+         "type": "Value",
+         "measured": 97.133659
+      },
+      {
+         "names": "QSF41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -93.250999,
+         "measured": -93.276733
+      },
+      {
+         "names": "HSC41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -12,
+         "measured": -11.99913
+      },
+      {
+         "names": "QSF42",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 82.621101,
+         "measured": 82.594772
+      },
+      {
+         "names": "QSF43",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -64.452599,
+         "measured": -64.459236
+      },
+      {
+         "names": "HSC42",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -26,
+         "measured": -25.984955
+      },
+      {
+         "names": "QSF44",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 81.814598,
+         "measured": 81.770798
+      },
+      {
+         "names": "QSF45",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 84.999802,
+         "measured": 84.972099
+      },
+      {
+         "names": "HSC43",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 52,
+         "measured": 52.022762
+      },
+      {
+         "names": "QSF46",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -82.662003,
+         "measured": -82.675285
+      },
+      {
+         "names": "QSF47",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 95.149696,
+         "measured": 95.094109
+      },
+      {
+         "names": "HSC44",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -29,
+         "measured": -29.079437
+      },
+      {
+         "names": "QSF48",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -50.566101,
+         "measured": -50.606239
+      },
+      {
+         "names": "AST41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -97.400002,
+         "measured": -97.43
+      },
+      {
+         "names": "ASC41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 113.78,
+         "measured": 113.79594
+      },
+      {
+         "names": "SSL41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -1,
+         "measured": -1.0001272
+      },
+      {
+         "names": "QSB41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 37.759998,
+         "measured": 37.794762
+      },
+      {
+         "names": "QSB42",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -48,
+         "measured": -47.982567
+      },
+      {
+         "names": "QSB43",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 15,
+         "measured": 15.0082
+      },
+      {
+         "names": "SEP41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -73,
+         "measured": -72.984314
+      },
+      {
+         "names": "QSK41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 25.5,
+         "measured": 25.502899
+      },
+      {
+         "names": "QSK42",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -47.5,
+         "measured": -47.50322
+      },
+      {
+         "names": "QSK43",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 43.200001,
+         "measured": 43.189056
+      },
+      {
+         "names": "SML41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": -15,
+         "measured": -15.00381
+      },
+      {
+         "names": "SMH41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 200,
+         "measured": 200.01247
+      },
+      {
+         "names": "SMV41",
+         "description": "",
+         "unit": "A",
+         "type": "Magnet",
+         "demand": 190,
+         "measured": 190.00383
+      },
+      {
+         "names": "FSH41-L",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 22.5,
+         "measured": 22.48102
+      },
+      {
+         "names": "FSH41-R",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 22.5,
+         "measured": 22.519764
+      },
+      {
+         "names": "FS42-L",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 80,
+         "measured": 80.022728
+      },
+      {
+         "names": "FS42-R",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 80,
+         "measured": 79.912094
+      },
+      {
+         "names": "FS42-V",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 160,
+         "measured": 160.20428
+      },
+      {
+         "names": "FSH43-L",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 120,
+         "measured": 119.79108
+      },
+      {
+         "names": "FSH43-R",
+         "description": "",
+         "unit": "mm",
+         "type": "Slit",
+         "demand": 120,
+         "measured": 119.83211
+      },
+      {
+         "names": "Beam Blocker (1=open)",
+         "description": "",
+         "unit": "",
+         "type": "Beamblocker",
+         "measured": 1
+      },
+      {
+         "names": "PSA (1=ready)",
+         "description": "",
+         "unit": "",
+         "type": "PSA",
+         "measured": 1
+      },
+      {
+         "names": "Proton current",
+         "description": "",
+         "unit": "uA",
+         "type": "Value",
+         "measured": 1772.8
+      },
+      {
+         "names": "Sep. HV- voltage",
+         "description": "",
+         "unit": "kV",
+         "type": "Separator",
+         "demand": 150,
+         "measured": 150
+      },
+      {
+         "names": "Sep. HV- current",
+         "description": "",
+         "unit": "mA",
+         "type": "Value",
+         "measured": 0.43000001
+      },
+      {
+         "names": "Sep. HV+ voltage",
+         "description": "",
+         "unit": "kV",
+         "type": "Separator",
+         "demand": 150,
+         "measured": 150
+      },
+      {
+         "names": "Sep. HV+ current",
+         "description": "",
+         "unit": "mA",
+         "type": "Value",
+         "measured": 0
+      },
+      {
+         "names": "Sep vacuum",
+         "description": "",
+         "unit": "mbar",
+         "type": "Value",
+         "measured": 0.0000023959999
+      },
+      {
+         "names": "Sep. Xray counter",
+         "description": "",
+         "unit": "Hz",
+         "type": "Value",
+         "measured": 5.639039
+      },
+      {
+         "names": "Beamline Power",
+         "description": "",
+         "unit": "kW",
+         "type": "Value",
+         "measured": 55.381554
+      }
+   ]
+}

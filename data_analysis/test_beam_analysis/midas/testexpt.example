@@ -1,0 +1,129 @@
+
+make runtest will create an empty experiment and run some basic tests
+
+rm -f exptab
+rm -rf testexpt
+mkdir testexpt
+echo testexpt /midas/testexpt testuser > exptab
+
+export MIDASSYS=/midas
+export MIDAS_EXPTAB=/midas/exptab
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbinit
+Checking environment... experiment name is "", remote hostname is ""
+Checking command line... experiment "", cleanup 0, dry_run 0, create_exptab 0, create_env 0
+Checking MIDASSYS....../midas
+Checking exptab... experiments defined in exptab file "/midas/exptab":
+0: "testexpt" <-- selected experiment
+
+Checking exptab... selected experiment "testexpt", experiment directory "/midas/testexpt/"
+
+Checking experiment directory "/midas/testexpt/"
+Good: no ODB save file
+
+Checking shared memory...
+Deleting old ODB shared memory...
+[system.cxx:996:ss_shm_delete,ERROR] shm_unlink(SHM)
+Good: no ODB shared memory
+Deleting old ODB semaphore...
+Deleting old ODB semaphore... create status 1, delete status 1
+
+Checking ODB size...
+Requested ODB size is 0 bytes (0.00B)
+ODB size file is "/midas/testexpt//.ODB_SIZE.TXT"
+ODB size file "/midas/testexpt//.ODB_SIZE.TXT" does not exist, creating it...
+Saved ODB size from "/midas/testexpt//.ODB_SIZE.TXT" is 1048576 bytes (1.05MB)
+We will initialize ODB for experiment "testexpt" on host "" with size 1048576 bytes (1.05MB)
+
+Creating ODB...
+Creating ODB... db_open_database() status 302
+Saving ODB...
+Saving ODB... db_close_database() status 1
+Connecting to experiment...
+
+Connected to ODB for experiment "testexpt" on host "" with size 1048576 bytes (1.05MB)
+Checking experiment name... status 1, found "testexpt"
+Disconnecting from experiment...
+
+Done
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "ls -l"
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+System                          DIR
+Experiment                      DIR
+Programs                        DIR
+Logger                          DIR
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mhttpd -D
+Becoming a daemon...
+sleep 1
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./build/examples/experiment/frontend -D
+Frontend name          :     Sample Frontend
+Event buffer size      :     2097152
+User max event size    :     1048576
+User max frag. size    :     5242880
+# of events per buffer :     2
+
+
+Becoming a daemon...
+sleep 1
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mlogger -D
+Becoming a daemon...
+sleep 1
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "scl"
+Name                Host
+mhttpd              localhost           
+Sample Frontend     localhost           
+Logger              localhost           
+ODBEdit             localhost           
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mtransition START
+[mtransition,INFO] Run #1 started
+sleep 2
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mtransition STOP
+[mtransition,INFO] Run #1 stopped
+sleep 1
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mtransition START
+[mtransition,INFO] Run #2 started
+sleep 2
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mtransition STOP
+[mtransition,INFO] Run #2 stopped
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mhist -l
+
+Event 'Periodic/PRDC'
+0: PRDC[16]
+
+Event 'Run transitions'
+0: State
+1: Run number
+
+Event 'System'
+0: Trigger per sec.
+1: Trigger kB per sec.
+# .hst files are no longer created. K.O. MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/mhdump -L testexpt/*.hst
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "sh \"sample frontend\""
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "sh logger"
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "sh mhttpd"
+
+MIDASSYS=/midas MIDAS_EXPTAB=/midas/exptab ./bin/odbedit -c "save testexpt.json"
+
+cut -b25- < testexpt/midas.log | sed 's/checksum: 0x.*, .* bytes/checksum: (omitted)/'
+[system.cxx:996:ss_shm_delete,ERROR] shm_unlink(SHM)
+[ODBInit,LOG] Program ODBInit on host localhost started
+[mhttpd,LOG] Program mhttpd on host localhost started
+[mhttpd,INFO] ODB subtree /Runinfo corrected successfully
+[Sample Frontend,LOG] Program Sample Frontend on host localhost started
+[Logger,LOG] Program Logger on host localhost started
+[Logger,INFO] Per-variable history is enabled
+[Logger,INFO] Equipment "Periodic" history is enabled, but there are no Variables in ODB
+[Logger,INFO] Equipment "Periodic" history is enabled, but there are no Variables in ODB
+[mtransition,INFO] Run #1 started
+[Logger,LOG] File '/midas/testexpt/run00001.mid' CRC32C checksum: (omitted)
+[Logger,LOG] File '/midas/testexpt/run00001.mid.lz4' CRC32C checksum: (omitted)
+[mtransition,INFO] Run #1 stopped
+[mtransition,INFO] Run #2 started
+[Logger,LOG] File '/midas/testexpt/run00002.mid' CRC32C checksum: (omitted)
+[Logger,LOG] File '/midas/testexpt/run00002.mid.lz4' CRC32C checksum: (omitted)
+[mtransition,INFO] Run #2 stopped

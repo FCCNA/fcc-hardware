@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+  <title>Elog query</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Elog')">
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+  <div>
+    <table class="mtable">
+      <tbody id="elog_table">
+        <tr>
+          <td colspan="6" class="mtableheader" id="table_name">Elog Query Results</td>
+        </tr>
+        <tr>
+          <td colspan="6" align="center">
+            <form method="GET" id="main_form">
+              <div id="buttons_block">
+                <input class="mbutton" type=submit name=cmd value="New elog">
+                <input class="mbutton" type=submit name=cmd value="Query elog">
+                <input class="mbutton" type=submit name=cmd value="Last elog">
+                <input type="hidden" name="show_text" id="show_text_input">
+                <input type="hidden" name="show_attachments" id="show_attachments_input">
+              </div>
+            </form>
+          </td>
+        </tr>
+
+        <tr>
+          <td colspan="6" align="left">
+            <div><input class="mbutton" type="checkbox" id="show_text" onclick="update_show();"> show message text</div>
+            <div><input class="mbutton" type="checkbox" id="show_attachments" onclick="update_show();"> show message attachments</div>
+          </td>
+        </tr>
+        
+        <tr hidden id="query_runs">
+          <td colspan=6>
+            Query: elog entries between runs <span id="r1">(r1)</span> and <span id="r2">(r2)</span>
+          </td>
+        </tr>
+        <tr hidden id="query_run_now">
+          <td colspan=6>
+            Query: elog entries between run <span id="r1_now">(r1_now)</span> and now
+          </td>
+        </tr>
+        <tr hidden id="query_last_n_hours">
+          <td colspan=6>
+            Query: Last <span id="last_n_hours">(last_n_hours)</span> hours
+          </td>
+        </tr>
+        <tr hidden id="query_last_n_days">
+          <td colspan=6>
+            Query: Last <span id="last_n_days">(last_n_days)</span> days
+          </td>
+        </tr>
+        <tr hidden id="query_dates">
+          <td colspan=6>
+            Query: between <span id="d1">(d1)</span> <span id="m1">(m1)</span> <span id="y1">(y1)</span> and <span id="d2">(d2)</span> <span id="m2">(m2)</span> <span id="y2">(y2)</span>
+          </td>
+        </tr>
+        <tr hidden id="query_date_now">
+          <td colspan=6>
+            Query: between <span id="d1_now">(d1_now)</span> <span id="m1_now">(m1_now)</span> <span id="y1_now">(y1_now)</span> and now
+          </td>
+        </tr>
+        
+        <tr hidden id="query_block">
+          <td colspan="6">
+            Query:
+            <span hidden id="query_author">Author: <b><span id="author">(author)</span></b></span>
+            <span hidden id="query_type">Type: <b><span id="type">(type)</span></b></span>
+            <span hidden id="query_system">System: <b><span id="system">(system)</span></b></span>
+            <span hidden id="query_subject">Subject: <b><span id="subject">(subject)</span></b></span>
+            <span hidden id="query_subtext">Text: <b><span id="subtext">(subtext)</span></b></span>
+          </td>
+        </tr>
+        
+        <tr>
+          <th>Date</th>
+          <th>Run</th>
+          <th>Author</th>
+          <th>Type</th>
+          <th>System</th>
+          <th>Subject</th>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+    function set_text(id, text) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.innerHTML = text;
+       }
+    }
+    
+    function set_value(id, text) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.value = text;
+       }
+    }
+    
+    function set_checked(id, checked) {
+       var e = document.getElementById(id);
+       if (e) {
+          console.log("set_checked: [" + id + "] " + e + " checked " + checked);
+          e.checked = checked;
+       }
+    }
+    
+    function add_option(id, text, selected) {
+       var e = document.getElementById(id);
+       //console.log("add_option: [" + id + "] " + e + " text[" + text + "] selected " + selected);
+       if (e) {
+          var o = document.createElement("option");
+          o.value = text;
+          o.innerHTML = text;
+          o.selected = selected;
+          e.appendChild(o);
+       }
+    }
+    
+    function add_button(id, text) {
+       var e = document.getElementById(id);
+       //console.log("add_option: [" + id + "] " + e + " text[" + text + "] selected " + selected);
+       if (e) {
+          var o = document.createElement("input");
+          o.type = "submit";
+          o.name = "cmd";
+          o.value = text;
+          o.className = "mbutton";
+          e.appendChild(o);
+       }
+    }
+    
+    function hide(id) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.style.visibility = "hidden";
+          e.style.display = "none";
+       }
+    }
+    
+    function unhide(id) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.style.visibility = "";
+          e.style.display = "";
+          e.hidden = 0;
+       }
+    }
+    
+    function disable(id) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.disabled = true;
+       }
+    }
+    
+    function set_att_link(id, text) {
+       var e = document.getElementById(id);
+       if (e) {
+          e.innerHTML = text;
+          //e.download  = text;
+          e.href = text + "?cmd=elog_att";
+       }
+    }
+
+    function add_attachment(e, text) {
+       var tr = document.createElement("tr");
+       var td;
+       
+       td = document.createElement("td");
+       td.colSpan = 6;
+       td.innerHTML = "Attachment: <a href=\"" + text + "?cmd=elog_att\">" + text + "</a>";
+       tr.appendChild(td);
+
+       e.appendChild(tr);
+    }
+
+    function get_show_text() {
+       var e = document.getElementById("show_text");
+       if (e) {
+          return e.checked;
+       }
+    }
+    
+    function get_show_attachments() {
+       var e = document.getElementById("show_attachments");
+       if (e) {
+          return e.checked;
+       }
+    }
+    
+    function update_show() {
+       console.log("update_show!");
+       set_value("show_text_input", get_show_text());
+       set_value("show_attachments_input", get_show_attachments());
+       //document.getElementById("main_form").submit();
+    }
+    
+    function load() {
+       var cmd = mhttpd_getParameterByName("cmd");
+
+       var show_text = (mhttpd_getParameterByName("show_text") == "true");
+       var show_attachments = (mhttpd_getParameterByName("show_attachments") == "true");
+
+       console.log("show text: " + show_text + " show_attachments: " + show_attachments);
+
+       set_checked("show_text", show_text);
+       set_checked("show_attachments", show_attachments);
+
+       set_value("show_text_input", show_text);
+       set_value("show_attachments_input", show_attachments);
+
+       var y1 = mhttpd_getParameterByName("y1");
+       var m1 = mhttpd_getParameterByName("m1");
+       var d1 = mhttpd_getParameterByName("d1");
+       var r1 = mhttpd_getParameterByName("r1");
+       
+       var y2 = mhttpd_getParameterByName("y2");
+       var m2 = mhttpd_getParameterByName("m2");
+       var d2 = mhttpd_getParameterByName("d2");
+       var r2 = mhttpd_getParameterByName("r2");
+
+       var author  = mhttpd_getParameterByName("author");
+       var type    = mhttpd_getParameterByName("type");
+       var system  = mhttpd_getParameterByName("system");
+       var subject = mhttpd_getParameterByName("subject");
+       var subtext = mhttpd_getParameterByName("subtext");
+
+	    var req = new Object();
+
+       if (cmd.toLowerCase().startsWith("elog last")) {
+          var last = cmd.substring(10);
+          var last_n_hours = parseInt(last);
+
+          if (last.endsWith("h")) {
+             set_text("last_n_hours", last_n_hours);
+             unhide("query_last_n_hours");
+             last_n_hours *= 1;
+          } else if (last.endsWith("d")) {
+             set_text("last_n_days", last_n_hours);
+             unhide("query_last_n_days");
+             last_n_hours *= 24;
+          }
+          
+          //console.log("cmd: " + cmd + ", last: [" + last + "], last_n_hours: " + last_n_hours);
+
+          req.last_n_hours = last_n_hours;
+       }
+
+       if (r1>0 && r2>0) {
+          set_text("r1", r1);
+          set_text("r2", r2);
+          unhide("query_runs");
+	       req.r1 = r1;
+	       req.r2 = r2;
+       } else if (r1 > 0) {
+          set_text("r1_now", r1);
+          unhide("query_run_now");
+	       req.r1 = r1;
+       }
+
+       var have_start_date = y1 && (y1.length>0);
+       var have_end_date = y2 && m2 && d2 && (y2.length>0) && (m2.length>0) && (d2.length>0);
+
+       if (have_start_date && have_end_date) {
+          set_text("y1", y1);
+          set_text("m1", m1);
+          set_text("d1", d1);
+          set_text("y2", y2);
+          set_text("m2", m2);
+          set_text("d2", d2);
+          unhide("query_dates");
+          
+	       req.y1 = y1;
+	       req.m1 = m1;
+	       req.d1 = d1;
+
+	       req.y2 = y2;
+	       req.m2 = m2;
+	       req.d2 = d2;
+       } else if (have_start_date) {
+          set_text("y1_now", y1);
+          set_text("m1_now", m1);
+          set_text("d1_now", d1);
+          unhide("query_date_now");
+	       req.y1 = y1;
+	       req.m1 = m1;
+	       req.d1 = d1;
+       }
+
+       if (author && author.length > 0) {
+          set_text("author", author);
+          unhide("query_author");
+          unhide("query_block");
+          req.author = author;
+       }
+
+       if (type && type.length > 0) {
+          set_text("type", type);
+          unhide("query_type");
+          unhide("query_block");
+          req.type = type;
+       }
+
+       if (system && system.length > 0) {
+          set_text("system", system);
+          unhide("query_system");
+          unhide("query_block");
+          req.system = system;
+       }
+
+       if (subject && subject.length > 0) {
+          set_text("subject", subject);
+          unhide("query_subject");
+          unhide("query_block");
+          req.subject = subject;
+       }
+
+       if (subtext && subtext.length > 0) {
+          set_text("subtext", subtext);
+          unhide("query_subtext");
+          unhide("query_block");
+          req.subtext = subtext;
+       }
+
+       mjsonrpc_call("el_query", req).then(function (rpc) {
+          var status = rpc.result.status;
+          var msg_array = rpc.result.msg;
+
+          //console.log("el_query returned messages: " + msg_array.length);
+
+          var e = document.getElementById("elog_table");
+          
+          for (var i=0; i<msg_array.length; i++) {
+             var msg = msg_array[i];
+          
+             //console.log("el_query message " + i + " tag " + msg.tag + " run " + msg.run);
+             
+             var encoding = msg.encoding;
+             
+             var html = false;
+             if (encoding == "HTML")
+                html = true;
+             
+             //console.log("msg encoding: " + encoding);
+
+             // <a href=%s>%s</a><td>%d<td>%s<td>%s<td>%s<td>%s</tr> ref, date, run, author, type, system, subject
+             var tr = document.createElement("tr");
+             var td;
+             
+             td = document.createElement("td");
+
+             td.innerHTML = "<a href=\"?cmd=Show+Elog&tag=" + msg.tag + "&show_text="+show_text+"&show_attachments="+show_attachments+"\">" + msg.date + "</a>";
+             tr.appendChild(td);
+
+             td = document.createElement("td");
+             td.innerHTML = msg.run;
+             tr.appendChild(td);
+
+             td = document.createElement("td");
+             td.innerHTML = msg.author;
+             tr.appendChild(td);
+
+             td = document.createElement("td");
+             td.innerHTML = msg.type;
+             tr.appendChild(td);
+
+             td = document.createElement("td");
+             td.innerHTML = msg.system;
+             tr.appendChild(td);
+
+             td = document.createElement("td");
+             td.innerHTML = msg.subject;
+             tr.appendChild(td);
+
+             e.appendChild(tr);
+
+             if (show_text) {
+                tr = document.createElement("tr");
+
+                td = document.createElement("td");
+                td.className = "mfont mtext";
+                td.colSpan = 6;
+                if (html) {
+                   td.innerHTML = "<br><div class='mfont mtext'>" + msg.text + "</div><br>";
+                } else {
+                   td.innerHTML = "<pre class='mfont mtext'>" + msg.text + "</pre>";
+                }
+                tr.appendChild(td);
+
+                e.appendChild(tr);
+             }
+
+             if (show_attachments) {
+                if (msg.attachment0.length > 0) {
+                   add_attachment(e, msg.attachment0);
+                }
+                
+                if (msg.attachment1.length > 0) {
+                   add_attachment(e, msg.attachment1);
+                }
+                
+                if (msg.attachment2.length > 0) {
+                   add_attachment(e, msg.attachment2);
+                }
+             }
+          }
+
+          var odb_list = [
+             "/Elog",
+          ];
+          
+          mjsonrpc_db_get_values(odb_list).then(function (rpc) {
+             var elog = rpc.result.data[0];
+             
+             //if (!elog["display run number"]) {
+             //   hide("run_number");
+             //}
+
+             //if (!elog["allow delete"]) {
+             //   disable("elog_delete_button");
+             //}
+
+             //if (!elog["allow edit"]) {
+             //   disable("elog_edit_button");
+             //}
+
+             if ("buttons" in elog) {
+                for (var i=0; i<elog.buttons.length; i++) {
+                   if (elog.buttons[i].length > 0) {
+                      add_button("buttons_block", "Elog Last " + elog.buttons[i]);
+                   }
+                }
+             }
+             
+          }).catch(function (error) {
+             mjsonrpc_error_alert(error);
+          });
+       }).catch(function (error) {
+          mjsonrpc_error_alert(error);
+       });
+    }
+    
+load();
+</script>
+</body>
+</html>

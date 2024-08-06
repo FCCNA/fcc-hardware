@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="mplot.js"></script>
+   <title>Example</title>
+</head>
+
+<script>
+
+   // This routine just dumps some random data into the ODB for testing
+   function create_data() {
+      // create some random data under /System/Tmp
+      let x1 = Array.from({length: 30}, () => Math.random() * 10 - 10/2);
+      x1.sort((a, b) => a - b);
+      let y1 = x1.map(v => 8 * Math.exp(- v*v / 2));
+
+      let x2 = Array.from({length: 100}, (_, i) => i/10 - 10/2);
+      let y2 = x2.map(v => 10 * Math.exp(- v*v / 2));
+
+      let size = 32;
+      let z = Array.from({length: size*size});
+      for (let y=0 ; y<size ; y++)
+         for (let x=0 ; x<size ; x++) {
+            z[y*size + x] = 10 * Math.exp(-(x-size/2)*(x-size/2) / size) *
+               Math.exp(-(y-size/2)*(y-size/2) / size );
+         }
+
+      let px1 = {};
+      px1.path = "/System/Tmp/Plot/X1";
+      px1.type = TID_DOUBLE;
+      px1.array_length = x1.length;
+      let py1 = {};
+      py1.path = "/System/Tmp/Plot/Y1";
+      py1.type = TID_DOUBLE;
+      py1.array_length = y1.length;
+      let px2 = {};
+      px2.path = "/System/Tmp/Plot/X2";
+      px2.type = TID_DOUBLE;
+      px2.array_length = x1.length;
+      let py2 = {};
+      py2.path = "/System/Tmp/Plot/Y2";
+      py2.type = TID_DOUBLE;
+      py2.array_length = y1.length;
+      let pz = {};
+      pz.path = "/System/Tmp/Plot/Z";
+      pz.type = TID_DOUBLE;
+      pz.array_length = z.length;
+      mjsonrpc_db_create([px1,py1,px2,py2,pz]).then(() => {
+         mjsonrpc_db_paste([
+            '/System/Tmp/Plot/X1',
+            '/System/Tmp/Plot/Y1',
+            '/System/Tmp/Plot/X2',
+            '/System/Tmp/Plot/Y2',
+            '/System/Tmp/Plot/Z'],
+            [x1, y1, x2, y2, z]).then(() => {
+            mplot_init(); // can only be called after all data has been created
+            resize();
+            window.addEventListener("resize", resize);
+      })});
+   }
+
+   function resize() {
+      let m = document.getElementById("mmain");
+      let gt = document.getElementById("gt");
+      let top = gt.getBoundingClientRect().top + window.scrollY;
+      let width = document.documentElement.clientWidth - parseInt(m.style.marginLeft) - 20;
+      let height = document.documentElement.clientHeight - top;
+
+      m.style.height = (document.documentElement.clientHeight - parseInt(m.style.paddingTop)) + "px";
+
+      let mp = document.getElementsByClassName('mplot');
+      Array.from(mp).forEach(p => {
+         p.mpg.canvas.height = Math.max(100, height / 2 - 14);
+         p.mpg.canvas.width = Math.max(200, width / 2 - 4);
+         p.mpg.redraw();
+      });
+   }
+
+   function modify_plots() {
+      // this function shows how to change plots programmatically
+      let p = document.getElementById("P1").mpg;
+
+      p.param.title.text = p.param.title.text === "First graph" ? "Another title" : "First graph";
+      p.param.plot[1].line.color = (p.param.plot[1].line.color + 1) % 16; // cycle line color
+      p.param.plot[1].marker.lineColor = p.param.plot[1].line.color;
+      p.param.plot[1].marker.fillColor = p.param.plot[1].line.color;
+
+      // generate new random data
+      let x = Array.from({length: 20}, () => Math.random() * 10 - 10/2);
+      x.sort((a, b) => a - b);
+      let y = x.map(v => 7 * Math.exp(- v*v / 2));
+
+      // add third graph to plot
+      p.setData(2, x, y);
+      // set label
+      p.param.plot[2].label = "Added data";
+   }
+
+   function overlay(plot, ctx) {
+      ctx.fillStyle = "red";
+      plot.drawTextBox(ctx, "First overlay line\nSecond overlay line", 120, 150);
+   }
+</script>
+
+<body class="mcss" onload="create_data(); mhttpd_init('Plot Example');">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <table class="mtable" id="maintable" style="margin:0">
+      <tr>
+         <th colspan="3" class="mtableheader">Plot Examples</th>
+      </tr>
+
+      <tr style="height:1%">
+         <td colspan="3" style="padding: 10px">
+            <p>This is an example page showing the different custom plots possible with the <i>mplot.js</i>
+               library.</p>
+            <p>The source code of this page is contained in
+               <a href="https://bitbucket.org/tmidas/midas/src/develop/resources/plot_example.html">midas/resources/plot_example.html</a>.</p>
+            <p>Find a full description of the plot syntax is available at
+               <a href="https://midas.triumf.ca/MidasWiki/index.php/Custom_plots_with_mplot">documentation</a>.</p>
+         </td>
+      </tr>
+
+      <tr id="gt">
+         <td>
+            <table style="width: 100%; height: 100%">
+               <tr>
+                  <td style="position: relative">
+                     <button onClick="modify_plots()" style="position: absolute; top: 10px; left: 10px">Modify</button>
+                     <!-- plot with two graphs and legend -->
+                     <div class="mplot" id="P1" name="mpl"
+                          data-odb-path="/System/Tmp/Plot"
+                          data-title="Scatter-plot"
+                          data-overlay="overlay()"
+                          data-x-text="x [mm]"
+                          data-y-text="Value [V]"
+                          data-x1="X2" data-y1="Y2"
+                          data-label1="Simulation"
+                          data-x2="X1" data-y2="Y1"
+                          data-label2="Measurement"></div>
+                  </td>
+                  <td>
+                     <!-- same plot with all modifications -->
+<div class="mplot" id="P2">
+{
+   "showMenuButtons": true,
+
+   "color": {
+      "background": "#FFFFFF",
+      "axis": "#808080",
+      "grid": "#D0D0D0",
+      "label": "#404040"
+   },
+
+   "title": {
+      "color": "#404040",
+      "backgroundColor": "#808080",
+      "textSize": 20,
+      "text": "Customized scatter plot"
+   },
+
+   "legend": {
+      "show": true,
+      "color": "#D0D0D0",
+      "backgroundColor": "#FFFFFF",
+      "textColor": "#404040",
+      "textSize": 16
+   },
+
+   "xAxis": {
+      "log": false,
+      "min": -6,
+      "max": 6,
+      "grid": true,
+      "textSize": 10,
+      "title": {
+         "text": "x [mm]",
+         "textSize" : 14
+      }
+   },
+
+   "yAxis": {
+      "log": false,
+      "min": -0.5,
+      "max": 10.5,
+      "grid": true,
+      "textSize": 10,
+      "title": {
+         "text": "Value [V]",
+         "textSize" : 10
+      }
+   },
+
+   "plot": [
+      {
+         "type": "scatter",
+         "getFromODB": true,
+         "odbPath": "/System/Tmp/Plot",
+         "x": "X2",
+         "y": "Y2",
+         "label": "Measurement",
+         "marker": {
+            "draw": true,
+            "lineColor": 3,
+            "fillColor": 3,
+            "style": "cross",
+            "size": 10,
+            "lineWidth": 2
+         },
+
+         "line": {
+            "draw": false,
+            "fill": true,
+            "color": 3,
+            "style": "solid",
+            "width": 1
+         }
+      }
+   ]
+
+}
+</div>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <!-- histogram -->
+                     <div class="mplot" id="P3"
+                          data-odb-path="/System/Tmp/Plot"
+                          data-h="Y2"
+                          data-title="Histogram"></div>
+                  </td>
+                  <td>
+                     <!-- colormap -->
+                     <div class="mplot" id="P4"
+                          data-odb-path="/System/Tmp/Plot"
+                          data-z="Z"
+                          data-z-min="0" data-z-max="10"
+                          data-nx="32" data-ny="32"
+                          data-x-text="X position [mm]"
+                          data-y-text="Y position [mm]"
+                          data-z-text="Count rate"
+                          data-title="Color Map"></div>
+                  </td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+   </table>
+</div>
+
+</body>
+</html>

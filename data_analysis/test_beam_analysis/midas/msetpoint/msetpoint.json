@@ -1,0 +1,158 @@
+{
+  "/MIDAS version" : "2.1",
+  "/MIDAS git revision" : "Fri Feb 10 17:59:57 2023 +0100 - midas-2022-05-c-263-g6a82e195 on branch develop",
+  "/filename" : "msetpoint.json",
+  "/ODB path" : "/",
+
+  "Experiment" : {
+    "Name": "MSetPoint",
+    "Menu" : {
+      "Status" : false,
+      "Start" : false,
+      "Transition" : false,
+      "ODB" : true,
+      "OldODB" : false,
+      "Messages" : true,
+      "Chat" : false,
+      "Elog" : false,
+      "Alarms" : false,
+      "Programs" : true,
+      "Buffers" : false,
+      "History" : false,
+      "OldHistory" : false,
+      "MSCB" : false,
+      "Sequencer" : false,
+      "Event Dump" : false,
+      "Config" : true,
+      "Example" : false,
+      "Help" : false
+    }
+  },
+
+  "Custom" : {
+    "Path" : "$MIDASSYS/msetpoint",
+    "Default" : "msetpoint.html",
+    "MSetPoint" : "msetpoint.html",
+    "MSPConfig" : "msp_config.html",
+    "Help" : "help.html"
+  },
+
+  "Programs" : {
+    "EPICS Frontend": {
+      "Required/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Required": true,
+      "Watchdog timeout/key": {
+        "type": 7,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Watchdog timeout": 10000,
+      "Check interval/key": {
+        "type": 6,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Check interval": "0x0002bf20",
+      "Start command/key": {
+        "type": 12,
+        "item_size": 256,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Start command": "",
+      "Auto start/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto start": false,
+      "Auto stop/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto stop": false,
+      "Auto restart/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto restart": false,
+      "Alarm class/key": {
+        "type": 12,
+        "item_size": 32,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Alarm class": "",
+      "First failed/key": {
+        "type": 6,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "First failed": "0x649d8c40"
+    },
+    "Logger": {
+      "Required/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Required": true,
+      "Watchdog timeout/key": {
+        "type": 7,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Watchdog timeout": 10000,
+      "Check interval/key": {
+        "type": 6,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Check interval": "0x0002bf20",
+      "Start command/key": {
+        "type": 12,
+        "item_size": 256,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Start command": "mlogger",
+      "Auto start/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto start": false,
+      "Auto stop/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto stop": false,
+      "Auto restart/key": {
+        "type": 8,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Auto restart": false,
+      "Alarm class/key": {
+        "type": 12,
+        "item_size": 32,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "Alarm class": "",
+      "First failed/key": {
+        "type": 6,
+        "access_mode": 7,
+        "last_written": 1688046656
+      },
+      "First failed": "0x649d8c40"
+    }
+  }
+}

@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="obsolete.js"></script>
+   <script src="mhttpd.js"></script>
+   <script src="controls.js"></script>
+   <title>Example</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('Test')">
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <div class="mmaintable">
+      <h1>MIDAS Javascript functions</h1>
+
+      <p>
+         This web page shows examples of how to use most MIDAS javascript and JSON-RPC functions.
+         For more information, please read the MIDAS documentation: <a
+              href="https://midas.triumf.ca/MidasWiki/index.php/Mhttpd.js">https://midas.triumf.ca/MidasWiki/index.php/Mhttpd.js</a>
+      </p>
+
+      <h2>Index</h2>
+
+      <pre>
+mjsonrpc_set_url(url);
+mjsonrpc_db_get_values(paths);
+mjsonrpc_db_copy(paths);
+mjsonrpc_db_paste(paths, values);
+mjsonrpc_db_ls(paths); 
+mjsonrpc_db_create(specs);
+mjsonrpc_db_resize(paths, new_lengths);
+test db_resize_string(paths, new_lengths, new_string_lengths);
+mjsonrpc_db_key(paths);
+test db_rename
+test db_link
+test db_reorder
+mjsonrpc_db_delete(paths); 
+mjsonrpc_cm_msg(message);
+test cm_msg_facilities();
+test cm_msg_retrieve(facility, time, min_messages);
+test cm_exist()
+test cm_shutdown()
+test start_program()
+test al_trigger_alarm()  
+test al_reset_alarm()  
+test get_alarms()
+test jrpc()
+test brpc()
+ODBEdit(path);
+        </pre>
+
+      <hr>
+
+      <h2>ODB functions:</h2>
+
+      <h2>mjsonrpc_db_create()</h2>
+
+      <p>
+         <input type=button value='Delete /Example'
+                onClick='var paths = mjsonrpc_db_delete(["/Example"]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Create /Example & co'
+                onClick='let paths = [
+             { "path" : "/Example/int", "type" : TID_INT },
+             { "path" : "/Example/bool", "type" : TID_BOOL },
+             { "path" : "/Example/dword", "type" : TID_DWORD },
+             { "path" : "/Example/qword", "type" : TID_QWORD },
+             { "path" : "/Example/float", "type" : TID_FLOAT },
+             { "path" : "/Example/double", "type" : TID_DOUBLE },
+             { "path" : "/Example/string", "type" : TID_STRING },
+             { "path" : "/Example/string_with_length", "type" : TID_STRING, "string_length": 256 },
+             { "path" : "/Example/int_array", "type" : TID_INT, "array_length": 5 },
+             { "path" : "/Example/double_array", "type" : TID_DOUBLE, "array_length": 5 },
+             { "path" : "/Example/string_array", "type" : TID_STRING, "array_length": 5, "string_length": 256 },
+             { "path" : "/Example/test_nan", "type" : TID_DOUBLE },
+             { "path" : "/Example/test_plusinf", "type" : TID_DOUBLE },
+             { "path" : "/Example/test_minusinf", "type" : TID_DOUBLE },
+          ];
+          mjsonrpc_db_create(paths).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_db_get_values()</h2>
+
+      <p>
+         <input
+                 type=button
+                 value='Push me'
+                 onClick='var paths = [
+                 "/Runinfo",
+                 "/Runinfo/Run number",
+                 "/does-not-exist", // returns an error
+                 "/Example",
+                 "/Example/int_array",
+                 "/Example/int_array[0]",
+                 "/Example/int_array[0,2]",
+                 "/Example/int_array[0-2]",
+                 "/Example/int_array[0,3-4,1-2]",
+                 "/Example/int_array[4-0]",
+                 "/Example/int_array[1,100]", // returns an error, index[100] does not exist
+                 "/Example/int_array[invalid index]" // returns an error
+                 ];
+                 mjsonrpc_db_get_values(paths).then(function(rpc) {
+                 document.getElementById("db_get_values_json_data").innerHTML = JSON.stringify(rpc);
+                 let now = new Date().getTime()/1000;
+                 let status = rpc.result.status;
+                 let runinfo = rpc.result.data[0];
+                 let runnumber = rpc.result.data[1];
+                 let error = rpc.result.data[2];
+                 let example = rpc.result.data[3];
+                 let example_array = rpc.result.data[4];
+                 document.getElementById("db_get_values_status").innerHTML = status;
+                 document.getElementById("db_get_values_runstate").innerHTML = runinfo.state;
+                 document.getElementById("db_get_values_runnumber").innerHTML = runnumber;
+                 document.getElementById("db_get_values_example_int").innerHTML = example.int;
+                 document.getElementById("db_get_values_example_array").innerHTML = example_array;
+                 let lw = runinfo["run number/last_written"];
+                 document.getElementById("db_get_values_data_age").innerHTML = "now: " + now + ", last_written: " + lw + ", age: " + (now-lw) + " seconds";
+                 }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+
+         <br>
+         JSON data: <span id='db_get_values_json_data'></span>
+         <br>
+         db_get_values() status: <span id='db_get_values_status'></span>
+         <br>
+         Runinfo/State: <span id='db_get_values_runstate'></span>
+         <br>
+         Run number: <span id='db_get_values_runnumber'></span>
+         <br>
+         /Example/int: <span id='db_get_values_example_int'></span>
+         <br>
+         /Example/int_array: <span id='db_get_values_example_array'></span>
+         <br>
+         data age: <span id='db_get_values_data_age'></span>
+      </p>
+
+      <h2>db_get_value() omit all optional information to reduce data size</h2>
+
+      <p>
+         <input
+                 type=button
+                 value='Push me'
+                 onClick='
+                 db_get_value("/Runinfo", rpc => {
+                    document.getElementById("db_get_value").innerHTML = JSON.stringify(rpc);
+                 });'>
+
+         <br>
+         JSON data: <span id='db_get_value'></span>
+      </p>
+
+      <h2>mjsonrpc_db_copy()</h2>
+
+      <p>
+         <input type=button value='Push me'
+                onClick='var paths = [
+                 "/Runinfo",
+                 "/does-not-exist", // error: does not exist
+                 "/Example",
+                 "/Example/int_array"
+                 ];
+                 mjsonrpc_db_copy(paths).then(function(rpc) {
+                 document.getElementById("db_copy_json_data").innerHTML =
+                 JSON.stringify(rpc.result); }).catch(function(error)
+                 { mjsonrpc_error_alert(error); });'>
+
+         <br>
+         JSON data: <span id='db_copy_json_data'></span>
+      </p>
+
+      <h2>mjsonrpc_db_paste()</h2>
+
+      <p>
+         <input type=button value='paste to /Example'
+                onClick='let paths = [
+              "/Example/int",
+              "/Example/int_array[2]",
+              "/Example/int_array[3,4]",
+              "/Example/int_array[invalid index]", // error: invalid array index
+              "/does-not-exist-test-db-paste", // error: does not exist
+              "/Example/string",
+              "/Example/string_array",
+              "/Example/string_array[1]",
+              ];
+              let values = [
+	      1,
+	      2,
+	      [ 3, 4],
+	      110, // error
+	      120, // error
+	      "test string",
+	      ["element0","element1","element2"],
+	      "another element1"
+	      ];
+              mjsonrpc_db_paste(paths, values).then(function(rpc) {
+              mjsonrpc_debug_alert(rpc);
+              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='paste /Example/string_array'
+                onClick='let paths = [
+              "/Example/string_array",
+              ];
+              let values = [ ["array element0","array element1","array element2"] ];
+              mjsonrpc_db_paste(paths, values).then(function(rpc) {
+              mjsonrpc_debug_alert(rpc);
+              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='extend /Example/string_array'
+                onClick='let paths = [
+              "/Example/string_array",
+              ];
+              let values = [ ["s0","s1","s2","s3","s4","s5","s6"] ];
+              mjsonrpc_db_paste(paths, values).then(function(rpc) {
+              mjsonrpc_debug_alert(rpc);
+              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='shrink /Example/string_array'
+                onClick='let paths = [
+              "/Example/string_array",
+              ];
+              let values = [ ["s00","s11","s22","s33"] ];
+              mjsonrpc_db_paste(paths, values).then(function(rpc) {
+              mjsonrpc_debug_alert(rpc);
+              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='paste string array element /Example/string_array'
+                onClick='let paths = [
+              "/Example/string_array[3]",
+              ];
+              let values = [ "paste element3" ];
+              mjsonrpc_db_paste(paths, values).then(function(rpc) {
+              mjsonrpc_debug_alert(rpc);
+              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      
+      <h2>mjsonrpc_db_ls()</h2>
+
+      <p>
+         <input type=button value='Push me'
+                onClick='let paths = [
+	              "/equipment",
+	              "/example",
+	              "/does-not-exist-test-db-ls" // returns an error
+	              ];
+	              mjsonrpc_db_ls(paths).then(function(rpc) {
+	              document.getElementById("db_ls_status").innerHTML = rpc.result.status;
+	              document.getElementById("db_ls_equipment").innerHTML = JSON.stringify(rpc.result.data[0]);
+	              document.getElementById("db_ls_example").innerHTML = JSON.stringify(rpc.result.data[1]);
+	              document.getElementById("db_ls_not_exist").innerHTML = JSON.stringify(rpc.result.data[2]);
+                 //mjsonrpc_debug_alert(rpc);
+	              }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+
+         <br>
+         RPC Status: <span id='db_ls_status'></span>
+         <br>
+         ls of /Equipment: <span id='db_ls_equipment'></span>
+         <br>
+         ls of /Example: <span id='db_ls_example'></span>
+         <br>
+         ls of non-existing directory: <span id='db_ls_not_exist'></span>
+      </p>
+
+      <h2>mjsonrpc_db_resize()</h2>
+
+      <p>
+         <input type=button value='Push me to grow /Example/double_array'
+                onClick='mjsonrpc_db_resize(["/Example/double_array", "/no-exist"], [ 20, 1 ]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Push me to shrink /Example/double_array'
+                onClick='mjsonrpc_db_resize(["/Example/double_array", "/no-exist"], [ 5, 1 ]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>db_resize_string()</h2>
+
+      <p>
+         <input type=button value='Push me to grow /Example/string_array'
+                onClick='mjsonrpc_call("db_resize_string", {"paths":["/Example/string_array"], "new_lengths":[20], "new_string_lengths":[256]}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Push me to shrink /Example/string_array'
+                onClick='mjsonrpc_call("db_resize_string", {"paths":["/Example/string_array"], "new_lengths":[10], "new_string_lengths":[32]}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_db_key()</h2>
+
+      <p>
+         <input
+                 type=button
+                 value='Push me'
+                 onClick='let paths = [
+                 "/Runinfo/run number",
+                 "/Example/int_array",
+                 "/does-not-exist" // returns an error
+                 ];
+                 mjsonrpc_db_key(paths).then(function(rpc) {
+                 document.getElementById("db_key_json_data").innerHTML =
+                 JSON.stringify(rpc.result); }).catch(function(error)
+                 { mjsonrpc_error_alert(error); });'>
+
+         <br>JSON data: <span id='db_key_json_data'></span>
+      </p>
+
+      <h2>mjsonrpc_db_rename()</h2>
+
+      <p>
+         <input type=button value='Rename /Example/int to intint'
+                onClick='mjsonrpc_call("db_rename", { "paths":["/Example/int"], "new_names":["intint"] }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Rename /Example/intint back to int'
+                onClick='mjsonrpc_call("db_rename", { "paths":["/Example/intint"], "new_names":["int"] }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_db_link()</h2>
+
+      <p>
+         <input type=button value='Symlink /Example/int to intlink'
+                onClick='mjsonrpc_call("db_link", { "new_links":["/Example/intlink"], "target_paths":["/Example/int"]}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_db_reorder()</h2>
+
+      <p>
+         <input type=button value='Move /Example/int to bottom'
+                onClick='mjsonrpc_call("db_reorder", { "paths":["/Example/int"], "indices":[-1]}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Move /Example/int to top'
+                onClick='mjsonrpc_call("db_reorder", { "paths":["/Example/int"], "indices":[0]}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_db_delete()</h2>
+
+      <p>
+         <input type=button value='Delete /Example/int & co'
+                onClick='let paths = [
+                 "/Example/int",
+                 "/Example/intint", // returns an error if "int" was not renamed to "intint"
+                 "/Example/intlink",
+                 "/Example/string",
+                 "/Example/string_with_length",
+                 "/Example/double_array",
+                 "/no-exist" // returns an error
+	         ];
+                 mjsonrpc_db_delete(paths).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Delete /Example'
+                onClick='var paths = mjsonrpc_db_delete(["/Example"]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <hr>
+
+      <h2>Message functions</h2>
+
+      <h2>mjsonrpc_cm_msg()</h2>
+
+      <p>
+         Type in a message and press Enter. See the new message on the MIDAS "messages" page
+         or press "Get MIDAS messages" button in the ODBGetMsg() section above.
+
+        <br>
+        <input type=text size=40 value='' onKeyPress='if (event.keyCode==13) { mjsonrpc_cm_msg(this.value).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); }); }'>
+      </p>
+
+      <h2>cm_msg_facilities</h2>
+
+      <p>
+         <input type=button value='Get list of message facilities'
+                onClick='mjsonrpc_call("cm_msg_facilities")
+                   .then(function(rpc) {
+                   document.getElementById("cm_msg_facilities_data").innerHTML = JSON.stringify(rpc.result.facilities);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+
+         <br>
+         <span id="cm_msg_facilities_data">
+           list of messages facilities goes here
+         </span>
+      </p>
+
+      <h2>cm_msg_retrieve</h2>
+
+      <p>
+         <input type=button value='Get last midas message'
+                onClick='mjsonrpc_call("cm_msg_retrieve", { "min_messages": 1 })
+                   .then(function(rpc) {
+                   document.getElementById("cm_msg_retrieve_num_messages").innerHTML = JSON.stringify(rpc.result.num_messages);
+                   document.getElementById("cm_msg_retrieve_messages").innerHTML = JSON.stringify(rpc.result.messages);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <input type=button value='Get last 10 midas messages'
+                onClick='mjsonrpc_call("cm_msg_retrieve", { "min_messages": 10 })
+                   .then(function(rpc) {
+                   document.getElementById("cm_msg_retrieve_num_messages").innerHTML = JSON.stringify(rpc.result.num_messages);
+                   document.getElementById("cm_msg_retrieve_messages").innerHTML = JSON.stringify(rpc.result.messages);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <input type=button value='Get last chat message'
+                onClick='mjsonrpc_call("cm_msg_retrieve", { "facility": "chat", "min_messages": 1 })
+                   .then(function(rpc) {
+                   document.getElementById("cm_msg_retrieve_num_messages").innerHTML = JSON.stringify(rpc.result.num_messages);
+                   document.getElementById("cm_msg_retrieve_messages").innerHTML = JSON.stringify(rpc.result.messages);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="cm_msg_retrieve_num_messages">number of messages goes here</span>
+         <br>
+         <span id="cm_msg_retrieve_messages">list of messages goes here</span>
+      </p>
+
+      <hr>
+
+      <h2>History functions</h2>
+
+      <h2>hs_get_active_events (hs_read_event_list)</h2>
+
+      <p>
+         <input type=button value='Get list of active history events'
+                onClick='mjsonrpc_call("hs_get_active_events")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_active_events_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_active_events_data">list of active history events goes here</span>
+      </p>
+
+      <p>
+         <input type=button value='Get list of history channels'
+                onClick='mjsonrpc_call("hs_get_channels")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_channels_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_channels_data">list of logger history channels</span>
+      </p>
+
+      <p>
+         <input type=button value='Reopen the history database'
+                onClick='mjsonrpc_call("hs_reopen")
+                   .then(function(rpc) {
+                   document.getElementById("hs_reopen_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_reopen_data">result of hs_reopen</span>
+      </p>
+
+      <p>
+         <input type=button value='Get list of history events'
+                onClick='mjsonrpc_call("hs_get_events")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_events_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_events_data">list of history events goes here</span>
+      </p>
+
+      <p>
+         <input type=button value='Get list of history events from MIDAS channel'
+                onClick='mjsonrpc_call("hs_get_events",{"channel":"MIDAS"})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_events_data_midas").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_events_data_midas">list of history events goes here, channel MIDAS</span>
+      </p>
+
+      <p>
+         <input type=button value='Get list of history tags'
+                onClick='mjsonrpc_call("hs_get_tags",{"events":["System","fetest","slow/SLOW","test_slow","nonexistant"]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_tags_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_tags_data">list of history tags goes here</span>
+      </p>
+
+      <p>
+         <input type=button value='Get list of history last-written'
+                onClick='mjsonrpc_call("hs_get_last_written",{"events":["Run transitions","fetest","fetest/EPS","slow/SLOW","test_slow"],"tags":["State","EPS","EPS","SLOW","data"],"index":[0,0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_last_written_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_get_last_written_data">list of history last-written goes here</span>
+      </p>
+
+      <p>
+         <input type=button value='Get history data'
+                onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read",{"start_time":t-10*60,"end_time":t,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW","test_slow"],"tags":["State","EPS","EPS","SLOW","data"],"index":[0,0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_read_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_read_data">history data</span>
+      </p>
+
+      <p>
+         <input type=button value='Get binned history data'
+                onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read_binned",{"start_time":t-1*60,"end_time":t,"num_bins":10,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW","test_slow"],"tags":["State","EPS","EPS","SLOW","data"],"index":[0,0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_read_binned_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_read_binned_data">binned history data</span>
+      </p>
+
+      <p>
+         <input type=button value='Get history data as binary arraybuffer'
+                onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read_arraybuffer",{"start_time":t-10*60,"end_time":t,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW","test_slow"],"tags":["State","EPS","EPS","SLOW","data"],"index":[0,0,0,0,0]}, "arraybuffer")
+                   .then(function(result) {
+                    //console.log("result: " + result);
+                    var data = new Float64Array(result);
+                   document.getElementById("hs_read_data_arraybuffer").innerHTML = data;
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_read_data_arraybuffer">history data</span>
+      </p>
+
+      <p>
+         <input type=button value='Get binned history data as binary arraybuffer'
+                onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read_binned_arraybuffer",{"start_time":t-1*60,"end_time":t,"num_bins":10,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW","test_slow"],"tags":["State","EPS","EPS","SLOW","data"],"index":[0,0,0,0,0]}, "arraybuffer")
+                   .then(function(result) {
+                    //console.log("result: " + result);
+                    var data = new Float64Array(result);
+                    document.getElementById("hs_read_binned_data_arraybuffer").innerHTML = data;
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'>
+         <br>
+         <span id="hs_read_binned_data_arraybuffer">binned history data</span>
+      </p>
+
+      <hr>
+
+      <h2>Inline editor functions</h2>
+
+      <h2>ODBEdit()</h2>
+
+      <p>
+         <i>Observe updated values in the ODBGet() section above. (Hint: press the "update now" button above)</i>
+      </p>
+      <p>
+         <input type=button value='Edit /Equipment/RpcExample/Settings/Example_int'
+                onClick='clearTimeout(updateTimerId); ODBEdit("/Equipment/RpcExample/Settings/Example_int"); update();'>
+      </p>
+
+      <hr>
+
+      <h2>Programs control functions</h2>
+
+      <p>
+        Observe the effect of these functions on the MIDAS Programs page.
+        <br>
+        <input type=button value='start fetest (start_program)' onClick='mjsonrpc_call("start_program", "{ \"name\": \"fetest\" }") .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='stop fetest (cm_shutdown)' onClick='mjsonrpc_call("cm_shutdown", "{ \"name\": \"fetest\" }") .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='check if fetest is running (cm_exist)' onClick='mjsonrpc_call("cm_exist", "{ \"name\": \"fetest\" }") .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <hr>
+
+      <h2>Run control</h2>
+
+      <p>Observe the effect of these functions on the MIDAS Status page and Messages page.</p>
+
+      <h2>test cm_transition()</h2>
+
+      <p>
+         <input type=button value='Start a new run'
+                onClick='mjsonrpc_call("cm_transition", { "transition":"TR_START", "debug_flag":2 }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='Stop the run'
+                onClick='mjsonrpc_call("cm_transition", { "transition":"TR_STOP", "debug_flag":2 }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>test cm_transition_status()</h2>
+
+      <p>
+         <input type=button value='get transition status'
+                onClick='mjsonrpc_call("cm_transition_status").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <hr>
+
+      <h2>Alarm functions</h2>
+
+      <p>Observe the effect of these functions on the MIDAS Alarms page and Status page.</p>
+
+      <h2>mjsonrpc_al_trigger_alarm()</h2>
+
+      <p>
+         <input type=button value='Create and trigger example internal alarm'
+                onClick='mjsonrpc_al_trigger_alarm("example_alarm", "message of the example alarm", "Warning", "condition of the example alarm", AT_INTERNAL).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_al_reset_alarm()</h2>
+
+      <p>
+         <input type=button value='Reset example alarm'
+                onClick='mjsonrpc_al_reset_alarm(["example_alarm"]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>mjsonrpc_get_alarms()</h2>
+
+      <p>
+        <input type=button value='get_alarms' onClick='mjsonrpc_call("get_alarms").then(function(rpc){document.getElementById("get_alarms_data").innerHTML = JSON.stringify(rpc.result, null, " ");}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <input type=button value='get_alarms with get_all' onClick='mjsonrpc_call("get_alarms", { "get_all": true }).then(function(rpc){document.getElementById("get_alarms_data").innerHTML = JSON.stringify(rpc.result, null, " ");}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <br>
+        Alarms: <span id='get_alarms_data'></span>
+      </p>
+
+      <hr>
+
+      <h2>mjsonrpc_jrpc() direct RPC from web page to frontend program</h2>
+
+      <p>
+         (note: frontend "fetest" should be running!) Also see the result of this function in the output of fetest and
+         in MIDAS Messages.
+        <br>
+        <input type=button value='Push me' onClick='mjsonrpc_call("jrpc", { "client_name":"fetest", "cmd":"xxx", "args":"xxx" }).then(function(rpc){document.getElementById("jrpc_data").innerHTML = JSON.stringify(rpc.result, null, "	");}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <br>
+        JRPC reply: <span id='jrpc_data'></span>
+      </p>
+
+      <hr>
+
+      <h2>mjsonrpc_brpc() direct RPC from web page to frontend program</h2>
+
+      <p>
+         (note: frontend "fetest" should be running!) Also see the result of this function in the output of fetest and
+         in MIDAS Messages.
+        <br>
+        <input type=button value='Push me' onClick='mjsonrpc_call("brpc", { "client_name":"fetest", "cmd":"xxx", "args":"xxx" }, "arraybuffer").then(function(rpc){document.getElementById("brpc_data").innerHTML = new DataView(rpc).byteLength + " bytes";}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <br>
+        BRPC reply: <span id='brpc_data'></span>
+      </p>
+
+      <hr>
+
+      <h2>mhttpd special functions</h2>
+
+      <p> Enable tracing of http requests:
+        <input type=button value='set http_trace 0'
+          onClick='mjsonrpc_call("set_http_trace", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <input type=button value='set http_trace 1'
+          onClick='mjsonrpc_call("set_http_trace", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <input type=button value='get http_trace'
+          onClick='mjsonrpc_call("get_http_trace", "{}").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <h2>MIDAS JSON RPC special functions and test cases</h2>
+
+      <p> Test built-in functions:
+        <input type=button value='set debug 0'
+          onClick='mjsonrpc_call("set_debug", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <input type=button value='set debug 1'
+          onClick='mjsonrpc_call("set_debug", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <input type=button value='get debug'
+          onClick='mjsonrpc_call("get_debug", "{}").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set time 0'
+           onClick='mjsonrpc_call("set_time", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set time 1'
+           onClick='mjsonrpc_call("set_time", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set time 2'
+           onClick='mjsonrpc_call("set_time", "2").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='get time'
+           onClick='mjsonrpc_call("get_time", "{}").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set sleep 0'
+           onClick='mjsonrpc_call("set_sleep", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set sleep 1'
+           onClick='mjsonrpc_call("set_sleep", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set sleep 2'
+                onClick='mjsonrpc_call("set_sleep", "2").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set sleep 5'
+                onClick='mjsonrpc_call("set_sleep", "5").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='set sleep 999 (timeout)'
+                onClick='mjsonrpc_call("set_sleep", "999").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='get sleep'
+                onClick='mjsonrpc_call("get_sleep").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test echo request'
+                onClick='mjsonrpc_call("echo", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test error request'
+                onClick='mjsonrpc_call("error", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <p> Test json encoder and decoder:
+         <input type=button value='test single value'
+                onClick='mjsonrpc_call("echo", 1).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test array of all types'
+                onClick='mjsonrpc_call("echo", [1,0x11,2.2,-2.2,1e3,1e-3,-1e-3,true,false,null,"string"]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test object'
+                onClick='mjsonrpc_call("echo", {"aaa":1,"bbb":{"ccc":3,"ddd":4}}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test array'
+                onClick='mjsonrpc_call("echo", [{"aaa":1},"bbb",["ccc",3,"ddd"]]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test 32-bit and 64-bit integers'
+                onClick='mjsonrpc_call("echo", [0,1,0x12345678,0xFFFFFFFF,0x100000000,0x812345678,0x8765432112345678,0xFFFFFFFFFFFFFFFF,18446744073709551615]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test BigInt'
+                onClick='mjsonrpc_call("echo", [0,1,78187493520,78187493520n,20015998341138,20015998341138n,5124095575331380,5124095575331380n,18446744073709551615,18446744073709551615n]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <p> Test error responses:
+         <input type=button value='test response to a non json-rpc request'
+                onClick='mjsonrpc_send_request("\"this is not a json-rpc request\"").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test unknown method request'
+                onClick='mjsonrpc_call("test call of unknown method", ["some params"]) .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test missing parameters'
+                onClick='mjsonrpc_call("test call with missing parameters").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test invalid request'
+                onClick='mjsonrpc_call("echo", function(){ ; }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test send invalid json'
+                onClick='mjsonrpc_send_request("send invalid json").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test invalid_json reply'
+                onClick='mjsonrpc_call("invalid_json", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test request with null response'
+                onClick='mjsonrpc_call("null", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test db_create array check'
+                onClick='mjsonrpc_db_create({"this is not an array":0}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test db_copy array check'
+                onClick='mjsonrpc_db_copy("this is not an array").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+      <p> Test batch requests:
+         <input type=button value='test empty batch request'
+                onClick='mjsonrpc_send_request([]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test 1 element batch request'
+                onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test 2 element batch request'
+                onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]}),mjsonrpc_make_request("db_key",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test 3 element batch request with one bad request'
+                onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]}),mjsonrpc_make_request("this_method_does_not_exist"),mjsonrpc_make_request("db_key",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+      <p> Test examples from mjsonrpc_user.cxx
+         <input type=button value='user example1 with wrong arguments'
+                onClick='mjsonrpc_call("user_example1", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='user example1 with one argument'
+                onClick='mjsonrpc_call("user_example1", "{ \"arg\": \"small brown fox etc\" }").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='user example1 with two arguments'
+                onClick='mjsonrpc_call("user_example1", "{ \"arg\": \"small brown fox etc\", \"optional_arg\": 123456 }").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='user example2'
+                onClick='mjsonrpc_call("user_example2", "{ \"arg\": \"big red fox etc\" }").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='user example3 normal'
+                onClick='mjsonrpc_call("user_example3", "{ \"arg\": 100 }").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='user example3 error'
+                onClick='mjsonrpc_call("user_example3", "{ \"arg\": 0 }") .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+      <p> test mjsonrpc_db_get_values() crash
+         <input type=button value='test db_get_values'
+                onClick='mjsonrpc_db_get_values(["/test/intarray[0,3-4]"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() array korner cases
+         <input type=button value='test single path'
+                onClick='mjsonrpc_db_paste(["/test/intarray[0,3-4]"], [[111,222,333]]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test1 bad array index (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[]"], [1111]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test2 bad array index (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[bad array index]"], [1111]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test too many data elements (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[1,2]"], [[11110,22220,33330]]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test too few data elements (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[1,2,3]"], [[11118,22228]]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test single array element'
+                onClick='mjsonrpc_db_paste(["/test/intarray[1]"], [1111]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test single array element wrong data (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[1]"], [[9111,9222,9333]]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test single array element wrong encoding (error)'
+                onClick='mjsonrpc_db_paste(["/test/intarray[2]"], [[11111]]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='test array fill with single value'
+                onClick='mjsonrpc_db_paste(["/test/intarray[0,3-4]"], [999]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='zero the test array'
+                onClick='mjsonrpc_db_paste(["/test/intarray[0-4]"], [0]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_BOOL /example/bool
+         <input type=button value='true'
+                onClick='mjsonrpc_db_paste(["/example/bool"], [true]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='false'
+                onClick='mjsonrpc_db_paste(["/example/bool"], [false]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"true"'
+                onClick='mjsonrpc_db_paste(["/example/bool"], ["true"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"false"'
+                onClick='mjsonrpc_db_paste(["/example/bool"], ["false"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='1 (true value)'
+                onClick='mjsonrpc_db_paste(["/example/bool"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='0 (false value)'
+                onClick='mjsonrpc_db_paste(["/example/bool"], [0]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"invalid bool" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/bool"], ["invalid bool"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_INT /example/int
+         <input type=button value='1'
+                onClick='mjsonrpc_db_paste(["/example/int"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"2"'
+                onClick='mjsonrpc_db_paste(["/example/int"], ["2"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='-3'
+                onClick='mjsonrpc_db_paste(["/example/int"], [-3]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"-4"'
+                onClick='mjsonrpc_db_paste(["/example/int"], ["-4"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"+5" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/int"], ["+5"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x12345678"'
+                onClick='mjsonrpc_db_paste(["/example/int"], ["0x12345678"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0xFFFFFFFE"'
+                onClick='mjsonrpc_db_paste(["/example/int"], ["0xFFFFFFFE"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='12345678901234567890 (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/int"], [12345678901234567890]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='-12345678901234567890 (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/int"], [-12345678901234567890]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_DWORD /example/dword
+         <input type=button value='1'
+                onClick='mjsonrpc_db_paste(["/example/dword"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"2"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["2"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"-3"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["-3"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x14"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0x14"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x12345678"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0x12345678"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0xFFFFFFFE"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0xFFFFFFFE"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='4294967294'
+                onClick='mjsonrpc_db_paste(["/example/dword"], [4294967294]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x7FFFFFFE"'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0x7FFFFFFE"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='2147483646'
+                onClick='mjsonrpc_db_paste(["/example/dword"], [2147483646]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x9876543210987654321" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0x9876543210987654321"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"this is not a number" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["this is not a number"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x123invalidhexnumber" (maybe should fail)'
+                onClick='mjsonrpc_db_paste(["/example/dword"], ["0x123invalidhexnumber"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_QWORD /example/qword
+         <input type=button value='1'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='0x14'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [0x14]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='0x8765432112345678 (will write wrong value)'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [0x8765432112345678]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='0x8765432112345678n'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [0x8765432112345678n]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"2"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["2"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"-3"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["-3"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x14"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0x14"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='4294967395'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [4294967395]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>          <input type=button value='4294967395.1'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [4294967395.1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x8765432112345678"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0x8765432112345678"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0xFFFFFFFFFFFFFFFE"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0xFFFFFFFFFFFFFFFE"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0xFFFFFFFFFFFFFFFF"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0xFFFFFFFFFFFFFFFF"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"18446744073709551615"'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["18446744073709551615"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='18446744073709551615n'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [18446744073709551615n]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='8446744073709551615n'
+                onClick='mjsonrpc_db_paste(["/example/qword"], [8446744073709551615n]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x9876543210987654321" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0x9876543210987654321"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"this is not a number" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["this is not a number"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x123invalidhexnumber" (maybe should fail)'
+                onClick='mjsonrpc_db_paste(["/example/qword"], ["0x123invalidhexnumber"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_DOUBLE /example/double
+         <input type=button value='1'
+                onClick='mjsonrpc_db_paste(["/example/double"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"2.2"'
+                onClick='mjsonrpc_db_paste(["/example/double"], ["2.2"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='-3.3'
+                onClick='mjsonrpc_db_paste(["/example/double"], [-3.3]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"-4.4"'
+                onClick='mjsonrpc_db_paste(["/example/double"], ["-4.4"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"0x55"'
+                onClick='mjsonrpc_db_paste(["/example/double"], ["0x55"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='1e100'
+                onClick='mjsonrpc_db_paste(["/example/double"], [1e100]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='1e9999 (should fail: invalid javascript value)'
+                onClick='mjsonrpc_db_paste(["/example/double"], [1e9999]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"1e9999" (as a string) (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/double"], ["1e9999"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='"invalid number" (should fail)'
+                onClick='mjsonrpc_db_paste(["/example/double"], ["invalid number"]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> test mjsonrpc_db_paste() values korner cases TID_FLOAT /example/float
+         <input type=button value='1'
+                onClick='mjsonrpc_db_paste(["/example/float"], [1]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+         <input type=button value='-2.2'
+                onClick='mjsonrpc_db_paste(["/example/float"], [-2.2]).then(function(rpc) { mjsonrpc_debug_alert(rpc); }).catch(function(error) { mjsonrpc_error_alert(error); });'>
+      </p>
+      <p> Test nan and inf encoding
+
+        <script>
+
+        function test_nan_inf_encode() {
+           var data = new Array();
+           data[0] = 3.1415;
+           data[1] = 1.0 / 0.0; // +infinity
+           data[2] = -1.0 / 0.0; // -infinity
+           data[3] = 0.0 / 0.0; // nan
+           data[4] = Math.sqrt(-1.0); // nan
+           alert("Test of JSON encode: data array: " + data + ", encoded to JSON: " + JSON.stringify(data));
+        }
+
+        function test_nan_inf_decode() {
+           var json = '[ 2.5, "NaN", 1, "+Infinity", "-Infinity", 1e10000, 1e-10000 ]';
+           var data = JSON.parse(json);
+           alert("Test of JSON decode: " + json + " decoded as data array: " + data);
+        }
+
+        </script>
+
+        <input type=button value='test encode of nan and inf' onClick='test_nan_inf_encode();'>
+        <input type=button value='test decode of nan and inf' onClick='test_nan_inf_decode();'>
+        <input
+          type=button
+          value='test db_paste of nan and inf'
+          onClick='var paths = [
+             "/example/test_nan",
+	          "/example/test_plusinf",
+	          "/example/test_minusinf",
+	       ];
+	       var values = [ "NaN", "Infinity", "-Infinity" ];
+          mjsonrpc_db_paste(paths, values).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         
+         <input
+           type=button
+           value='test db_copy of nan and inf'
+           onClick='var paths = [
+             "/example/test_nan",
+	          "/example/test_plusinf",
+	          "/example/test_minusinf",
+	       ];
+          mjsonrpc_db_get_values(paths).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+         <input type=button value='test MJSonNode encoding of nan and inf'
+           onClick='mjsonrpc_call("test_nan_inf").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'>
+      </p>
+
+      <p> Test arraybuffer requests
+
+        <script>
+
+        function test_arraybuffer() {
+           var req = mjsonrpc_make_request("test_arraybuffer", null, "arraybuffer");
+           mjsonrpc_send_request(req).then(function(reply) {
+              alert("test_arraybuffer returned: " + reply);
+{
+              var dv = new DataView(reply);
+              alert("dv: " + dv + ", dv.length: " + dv.byteLength + ", u8[0]: " + dv.getUint8(0) + ", u16[0]: " + dv.getUint16(0));
+}
+{
+              var u8 = new Uint8Array(reply);
+              alert("u8: " + u8 + ", u8.length: " + u8.length + ", u8[0]: " + u8[0] + ", u8[1]: " + u8[1]);
+}
+{
+              var u16 = new Uint16Array(reply);
+              alert("u16: " + u16 + ", u16.length: " + u16.length + ", u16[4]: " + u16[4]);
+}
+{
+              var u32 = new Uint32Array(reply);
+              alert("u32: " + u32 + ", u32.length: " + u32.length + ", u32[4]: " + u32[4]);
+}
+{
+              var f64 = new Float64Array(reply);
+              alert("f64: " + f64 + ", f64.length: " + f64.length + ", f64[3]: " + f64[3]);
+}
+           }).catch(function(error){mjsonrpc_error_alert(error);});
+        }
+
+        function test_arraybuffer_batch() {
+           var req = [
+              mjsonrpc_make_request("test_arraybuffer", null, "arraybuffer"),
+              mjsonrpc_make_request("test_arraybuffer", null, "arraybuffer") ];
+           mjsonrpc_send_request(req).then(function(reply) {
+              alert("test_arraybuffer batch returned: " + reply);
+           }).catch(function(error){mjsonrpc_error_alert(error);});
+        }
+
+        </script>
+
+        <input type=button value='test arraybuffer' onClick='test_arraybuffer();'>
+        <input type=button value='test batched arraybuffer (error)' onClick='test_arraybuffer_batch();'>
+      </p>
+
+      <p> Test modbset()
+
+        <script>
+
+        function test_modbset() {
+           modbset("/example/int", 1);
+           modbset("/example/int", 2);
+           modbset("/example/int", 3);
+           modbset("/example/int", 4);
+           modbset("/example/int", 5);
+        }
+
+        function test_chained_db_paste() {
+           var paths = [ "/example/int" ];
+           mjsonrpc_db_paste(paths,[6]).then(function(rpc) {
+              mjsonrpc_db_paste(paths,[7]).then(function(rpc) {
+                 mjsonrpc_db_paste(paths,[8]).then(function(rpc) {
+                    mjsonrpc_db_paste(paths,[9]).then(function(rpc) {
+                       mjsonrpc_db_paste(paths,[10]).then(function(rpc) {
+                          // nothing
+                       }).catch(function(error){mjsonrpc_error_alert(error);});
+                    }).catch(function(error){mjsonrpc_error_alert(error);});
+                 }).catch(function(error){mjsonrpc_error_alert(error);});
+              }).catch(function(error){mjsonrpc_error_alert(error);});
+           }).catch(function(error){mjsonrpc_error_alert(error);});
+        }
+
+        </script>
+
+        <input type=button value='test modbset()' onClick='test_modbset();'>
+        <input type=button value='test chained db_paste()' onClick='test_chained_db_paste();'>
+      </p>
+
+      <p> Test set and get e.innerHTML
+
+        <script>
+
+        function test_innerHTML(v) {
+           if (!v) {
+              v = document.getElementById("test_innerHTML_input").value;
+           }
+           var e = document.getElementById("test_innerHTML");
+           e.innerHTML = v;
+           var g = e.innerHTML;
+           var match = (v === g);
+           if (!match) {
+              alert("innerHTML mismatch: set: " + v + ", get: " + g);
+           }
+        }
+
+        </script>
+
+        <input type=button value='test a&b' onClick='test_innerHTML("a&b");'>
+        <input type=button value="span id=\'aaa\'" onClick="test_innerHTML('<span id=\'aaa\'>span</span>');">
+        or enter:
+        <input type=text id="test_innerHTML_input" value="a&b">
+        <input type=button value='test set and get innerHTML' onClick='test_innerHTML();'>
+        Span: 
+        <span id="test_innerHTML">test_innerHTML</span>
+      </p>
+
+      <h2>mjsonrpc_get_schema()</h2>
+
+      <p>
+        <input type=button value='Push me' onClick='mjsonrpc_call("get_schema").then(function(rpc){document.getElementById("get_schema_data").innerHTML = JSON.stringify(rpc.result, null, " ");}).catch(function(error){mjsonrpc_error_alert(error);});'>
+        <br>
+        JSON-RPC schema: <span id='get_schema_data'></span>
+      </p>
+
+      <hr>
+
+      <h2>Obsolete functions</h2>
+
+      <pre>
+ODBSet(path, value, pwdname); ---- use mjsonrpc_db_paste() instead
+ODBGet(path, format, defval, len, type); ---- use ODBMCopy() instead ---- use mjsonrpc_db_get_values() instead
+ODBMGet(paths, callback, formats); ---- use ODBMCopy() instead ---- use mjsonrpc_db_get_values() instead
+ODBGetRecord(path); ---- use ODBMCopy() instead ---- use mjsonrpc_db_get_values() instead
+ODBExtractRecord(record, key); ---- use ODBMCopy() instead ---- use mjsonrpc_db_get_values() instead
+new ODBKey(path); ---- use ODBMKey() instead
+ODBCopy(path, format); ---- use ODBMCopy() instead ---- use mjsonrpc_db_get_values() instead
+ODBMCopy(paths, callback, format); ---- use mjsonrpc_db_get_values() instead
+ODBMLs(paths, callback); ---- use mjsonrpc_db_ls() instead
+ODBMCreate(paths, types); ---- use mjsonrpc_db_create() instead
+ODBMCreate(paths, types, arraylengths, stringlengths, callback); ---- use mjsonrpc_db_create() instead
+ODBMResize(paths, arraylengths, stringlengths, callback); ---- use mjsonrpc_db_resize() instead
+ODBMRename(paths, names, callback);  ---- use RPC "db_rename"
+ODBMLink(paths, links, callback);  ---- use RPC "db_link"
+ODBMReorder(paths, indices, callback); ---- use RPC "db_reorder"
+ODBMKey(paths, callback); ---- use mjsonrpc_db_key() instead
+ODBMDelete(paths, callback); ---- use mjsonrpc_db_delete() instead
+ODBRpc(name, command, args[, callback[, max_reply_length]]); ---- use RPC "jrpc"
+ODBGenerateMsg(m); ---- use mjsonrpc_cm_msg() instead
+ODBGetMsg(n); --- use RPC "cm_msg_retrieve"
+ODBGetAlarms(); ---- use mjsonrpc_call("get_alarms")
+        </pre>
+
+      <hr>
+
+      <h2>Example of periodic update</h2>
+
+      <p id="LastUpdated">Last updated: never</p>
+      <p id="LastStatus">Last status</p>
+      <p id="LastValue">Last value</p>
+
+      <input type=button value='Update now once' onClick='updatePeriod=0; update();'>
+      <input type=button value='Update every 1 sec' onClick='updatePeriod=1000; update();'>
+      <input type=button value='Update every 10 sec' onClick='updatePeriod=10000; update();'>
+
+      <script>
+
+         var updatePeriod = 0; // 10000; // in msec
+         var updateTimerId = 0;
+
+         function callback(arg) {
+            document.getElementById('mget_example_int').innerHTML = arg[0];
+            document.getElementById('mget_slow_2').innerHTML = arg[1];
+         }
+
+         function load() {
+            document.getElementById('LastUpdated').innerHTML = "Updating..." + new Date;
+
+            mjsonrpc_db_get_values(["/equipment/slow/variables/slow"]).then(function (rpc) {
+               document.getElementById("db_get_values_json_data").innerHTML = JSON.stringify(rpc);
+               var now = new Date().getTime() / 1000;
+               var status = rpc.result.status;
+               var slow = rpc.result.data[0];
+               document.getElementById("LastStatus").innerHTML = "Status: " + status;
+               document.getElementById("LastValue").innerHTML = "Value of /equipment/slow/variables/slow: " + slow;
+               document.getElementById('LastUpdated').innerHTML = "Last updated: " + new Date;
+            }).catch(function (error) {
+               document.getElementById('LastUpdated').innerHTML = "Error: " + error;
+               mjsonrpc_error_alert(error);
+            });
+
+         }
+
+         function update() {
+            clearTimeout(updateTimerId);
+            load();
+            if (updatePeriod > 0)
+               updateTimerId = setTimeout('update()', updatePeriod);
+         }
+
+         function main() {
+            clearTimeout(updateTimerId);
+         }
+
+         main();
+         if (updatePeriod > 0)
+            update();
+      </script>
+   </div>
+</div>
+
+<script>
+   //
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   // page scripts go here
+   //
+   //update_periodic();
+</script>
+</body>
+</html>

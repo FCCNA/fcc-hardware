@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <link id="favicon" rel="shortcut icon" type="image/png" href="favicon.png" />
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <title>ODB open records</title>
+</head>
+
+<body class="mcss" onload="mhttpd_init('ODB')">
+
+<!-- header and side navigation will be filled in mhttpd_start -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+
+   <table width="95%" class="mtable" id="sorTable">
+      <tr>
+         <td colspan=2 class="mtableheader">ODB open records under <span id=odb_path>odbpath</span></td>
+      </tr>
+      <tr class="mtabletitle">
+         <th>ODB path</th>
+         <th>Open by</th>
+      </tr>
+   </table>
+
+   <div id="updateStatus" align="left">
+      updateStatus
+   </div>
+</div>
+
+<script>
+   var update_timer_id;
+
+   function set_if_changed(e, v) {
+      if (e) {
+         if (e.innerHTML !== v) {
+            //console.log("set_if_changed: " + e + " from " + e.innerHTML + " to " + v);
+            e.innerHTML = v;
+         }
+      }
+   }
+
+   function hide_if_changed(e) {
+      if (e) {
+         if (e.style.display !== "none") {
+            //console.log("set_if_changed: " + e + " from " + e.innerHTML + " to " + v);
+            e.style.display = "none";
+         }
+      }
+   }
+
+   function show_if_changed(e) {
+      if (e) {
+         if (e.style.display !== "") {
+            //console.log("set_if_changed: " + e + " from " + e.innerHTML + " to " + v);
+            e.style.display = "";
+         }
+      }
+   }
+
+   function create_path(path) {
+      var table = document.getElementById("sorTable");
+
+      if (!table)
+         return; // just in case
+
+      //console.log("Creating: " + name + " table: " + table);
+
+      var tr = document.createElement("tr");
+      tr.id = "path " + path;
+      tr.className = "mtable";
+
+      var td;
+
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = "path";
+      tr.appendChild(td);
+
+      td = document.createElement("td");
+      td.align = "center";
+      td.innerHTML = "client";
+      tr.appendChild(td);
+
+      table.appendChild(tr);
+
+      return tr;
+   }
+
+   var paths = {};
+
+   function callback(rpc) {
+      //document.getElementById('updateStatus').innerHTML = "RWP_";
+
+      //console.log("SOR: " + JSON.stringify(rpc));
+
+      var sor = rpc.result.sor;
+
+      // hide table row of clients that are no longer present
+      for (var path in paths) {
+         paths[path] = "";
+      }
+
+      if (sor) {
+         for (var i = 0; i < sor.length; i++) {
+             var s = sor[i];
+             if (paths[s.path]) {
+                paths[s.path] += ", " + s.name;
+             } else {
+                paths[s.path] = s.name;
+             }
+         }
+      }
+
+      // display accumulated data, hide table row of paths that are no longer present
+      var sorted_paths = Object.keys(paths).sort();
+      //console.log("sorted: " + sorted_paths);
+      // console.log(paths);
+      for (var i in sorted_paths) {
+         var path = sorted_paths[i];
+         var clients = paths[path];
+         //console.log("path " + path + " clients " + clients);
+         if (!clients || clients.length < 1) {
+            var e = document.getElementById("path " + path);
+            hide_if_changed(e);
+            continue;
+         }
+
+         var e = document.getElementById("path " + path);
+         if (!e) e = create_path(path);
+         if (!e) continue;
+
+         //console.log(s.name + " | " + s.path + " | " + e);
+
+         set_if_changed(e.childNodes[0], path);
+         set_if_changed(e.childNodes[1], clients);
+
+         show_if_changed(e);
+      }
+
+      // handled now by mhttpd_refresh
+      document.getElementById('updateStatus').innerHTML = "";
+   }
+
+   function update() {
+      //document.getElementById('updateStatus').innerHTML = "R___";
+      var odb_path = mhttpd_getParameterByName("odb_path");
+      var e = document.getElementById("odb_path");
+      set_if_changed(e, odb_path);
+      mjsonrpc_call("db_sor",{"path":odb_path}).then(function (rpc) {
+         callback(rpc);
+      }).catch(function (error) {
+         //mjsonrpc_error_alert(error);
+         document.getElementById('updateStatus').innerHTML = "RWE: RPC or JS error: " + mjsonrpc_decode_error(error);
+      });
+      //document.getElementById('updateStatus').innerHTML = "RW__";
+   }
+
+   function update_periodic() {
+      clearTimeout(update_timer_id);
+      var update_period = 1000;
+      update();
+      update_timer_id = setTimeout('update_periodic()', update_period);
+   }
+
+   update_periodic();
+</script>
+</body>
+</html>

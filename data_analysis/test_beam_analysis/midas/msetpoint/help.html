@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html class="mcss" lang="en">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <title>Example</title>
+
+   <style>
+       .mtable td {
+           padding: 5px;
+       }
+       .mtable th {
+           padding: 5px;
+           text-align: center;
+       }
+       p {
+           text-align: justify;
+           padding: 20px;
+      }
+   </style>
+</head>
+
+<body class="mcss" onload="mhttpd_init();">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+   <div style="height: 100px"></div>
+   <table id="spTable" class="mtable" style="width: 500px;margin">
+      <tr>
+         <th class="mtableheader">
+            MSetPoint
+         </th>
+      </tr>
+      <tr>
+         <td style="text-align: center;">
+            <h1>MSetPoint version 0.9</h1>
+            <p>
+               MSetPoint, which stands for MIDAS Set Point, is an extension of the MIDAS data acquisition
+               system designed for beam line control through the
+               <a href="https://epics.anl.gov/docs/ca.php" target="_blank">EPICS channel access</a> system.
+               It provides real-time values for various beamline elements and offers a user-friendly
+               interface to modify these values.
+               Additionally, MSetPoint supports saving and loading these values from files.</p>
+            <p>
+               For further information on MIDAS, please visit the
+               <a href="https://midas.triumf.ca" target="_blank">MIDAS</a> home page.
+
+               For further information about MSetPoint, visit the online
+               <a href="https://bitbucket.org/tmidas/midas/wiki/MSetPoint" target="_blank">documentation</a>
+               on bitbucket.
+            </p>
+            <div style="font-size: 10px;"><i>S. Ritt, PSI, 2023</i></div>
+         </td>
+      </tr>
+
+   </table>
+</div>
+
+</body>
+</html>

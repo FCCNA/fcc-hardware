@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="20"
+   height="20"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="#606060"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="feather feather-folder"
+   version="1.1"
+   id="svg16"
+   sodipodi:docname="folder-open.svg"
+   inkscape:version="1.2.1 (9c6d41e, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs20">
+    <inkscape:path-effect
+       effect="fillet_chamfer"
+       id="path-effect2548"
+       is_visible="true"
+       lpeversion="1"
+       nodesatellites_param="F,0,0,1,0,0,0,1 @ F,0,0,1,0,1.8078803,0,1 @ F,0,0,1,0,0,0,1"
+       unit="px"
+       method="auto"
+       mode="F"
+       radius="0"
+       chamfer_steps="1"
+       flexible="false"
+       use_knot_distance="true"
+       apply_no_radius="true"
+       apply_with_radius="true"
+       only_selected="false"
+       hide_knots="false" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview18"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="11.8"
+     inkscape:cx="-3.4745763"
+     inkscape:cy="13.135593"
+     inkscape:window-width="1581"
+     inkscape:window-height="942"
+     inkscape:window-x="1199"
+     inkscape:window-y="327"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg16" />
+  <path
+     d="m 19.812374,18.835236 c -0.262798,1.079127 -0.702569,2.214426 -1.694678,2.214426 H 3.7467112 c -0.9921094,0 -1.796373,-0.900371 -1.796373,-2.011036 V 4.9613742 c 0,-1.1106645 0.8042636,-2.011036 1.796373,-2.011036 h 8.1519498 l 2.101458,3.0165539 6.558255,-0.1016949 c 2.008878,-0.03115 2.160866,1.033605 1.898068,2.1127309 z"
+     id="path14"
+     style="stroke-width:1.90068"
+     sodipodi:nodetypes="ssssssccsss" />
+  <path
+     style="fill:none;stroke-width:1.92;stroke-linejoin:round;stroke-dasharray:none"
+     d="M 2.9491525,20.745763 6.0842727,7.757408 A 2.3153339,2.3153339 141.55419 0 1 8.3162962,5.9854206 L 19.118644,5.8983052"
+     id="path417"
+     sodipodi:nodetypes="ccc"
+     inkscape:path-effect="#path-effect2548"
+     inkscape:original-d="M 2.9491525,20.745763 6.5084747,5.9999997 19.118644,5.8983052" />
+</svg>

@@ -91,8 +91,36 @@ if __name__ == "__main__":
         mfile = midas.file_reader.MidasFile(file_path + file_name, use_numpy = True)
 
         print(colored(f'*******INFORMATION OF THE RUN {run_number}*******', "red"))
+
+        mfile.jump_to_start()
+        
+        end_odb = mfile.get_eor_odb_dump().data
+        
+        scale = end_odb['Equipment']['Trigger']['Settings']['Channel Scale']
+        position = end_odb['Equipment']['Trigger']['Settings']['Channel Position']
+        HPOS = end_odb['Equipment']['Trigger']['Settings']['Horizontal Position']
+        HScale = end_odb['Equipment']['Trigger']['Settings']['Horizontal Scale']
+        SARA = end_odb['Equipment']['Trigger']['Settings']['Sample Rate']
+        Temperature, Umidity, Press = end_odb['Equipment']['ArduinoEquipment']['Variables']['ARD0']
+        print(colored(f'Temperature: {Temperature}', 'green'))
+        print(colored(f'Umidity: {Umidity}', 'green'))
+        print(colored(f'Pressure: {Press}', 'green'))
+        Tensione = end_odb['Equipment']['caen_hv']['Variables']['VM00'] #V
+        Corrente = end_odb['Equipment']['caen_hv']['Variables']['IM00'] #μA
+        bit = 2**16
+        Channel_Enabled = end_odb['Equipment']['Trigger']['Settings']['Channel Enable']
+        print(colored(f'scale: {scale}', 'green'))
+        print(colored(f'position: {position}', 'green'))
+        print(colored(f'Horizontal Positon: {HPOS}', 'green'))
+        print(colored(f'Horizontal Scale: {HScale}', 'green'))
+        print(colored(f'Sampling Rate: {SARA}', 'green'))
+        print(colored(f'Tensione: {Tensione}', 'green'))
+        print(colored(f'Corrente: {Corrente}', 'green'))
+
+
         with open(f'{file_path}/runlog.log', 'r') as file:
             lines = file.readlines()
+        
 
         run_description = ""
         start_time = None

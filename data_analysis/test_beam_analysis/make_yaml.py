@@ -2,8 +2,6 @@ import yaml
 
 runs_info = {}
 runs_info['BSO'] = {}
-runs_info['BGO'] = {}
-
 runs_info['BSO']['mu'] = {}
 runs_info['BSO']['e'] = {}
 
@@ -41,7 +39,8 @@ runs_info['BSO']['e'][20] = [277]
 runs_info['BSO']['e'][0] = [278]
 
 
-runs_info['BGO']['mu'] = {}
+runs_info['BGO'] = {}
+runs_info['BGO']['e'] = {}
 
 runs_info['BGO']['e'][180] = [207, 210, 211]
 runs_info['BGO']['e'][160] = [213, 214]

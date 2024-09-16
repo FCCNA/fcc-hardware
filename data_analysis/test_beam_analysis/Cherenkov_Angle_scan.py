@@ -68,46 +68,38 @@ if __name__ == "__main__":
     wf = {}
     df = {}
     mean = {}
-    fig_path = f'figures/{args.crystal}/{args.beam}'
+    
+    crystal = args.crystal
+    beam = args.beam
+
+    fig_path = f'figures/{crystal}/{beam}'
     if not os.path.exists(fig_path):
         os.makedirs(fig_path)
         print(f"Cartella '{fig_path}' creata.")
     else:
         print(f"Cartella '{fig_path}' esiste già.")
-    print('Crystal: ', args.crystal)
-    print('Particle: ', args.beam)
+    print('Crystal: ', crystal)
+    print('Particle: ', beam)
     channels = [1, 2]
-    for angle, run_number in runs_info[args.crystal][args.beam].items():
-        print(f'Reading Run {run_number} - Angle {angle}')
+    for angle, run_number in runs_info[crystal][beam].items():
+        print(f'Reading Run {run_number} - Angle {angle} - Crystal {crystal}')
 
-        if os.path.exists(f'./parqs/info_run{run_number}.parq'):
-            df[angle] = pd.read_parquet(f'./parqs/info_run{run_number}.parq')
+        if os.path.exists(f'./parqs/info_run_{crystal}_{angle}.parq'):
+            df[angle] = pd.read_parquet(f'./parqs/info_run_{crystal}_{angle}.parq')
         else:
-            wf[angle], df[angle] = read_waveform(run_number)
-            df[angle].to_parquet(f'./parqs/info_run{run_number}.parq')
-        '''
-        fig, ax = plt.subplots(len(channels), 1, sharex = True, figsize = (21, 9*len(channels)))
-        for i, channel in enumerate(channels):
-            event_id = 123
-            ax[i].plot(wf[angle][0]['times'], wf[angle][event_id][channel], label='Dati', color='darkcyan', linestyle='-')
-            ax[i].plot(wf[angle][0]['times'], wf[angle][event_id][f'{channel}media'], label='Dati', color='darkorange', linestyle='-')
-            ax[i].set_ylabel('Amplitude [mV]', fontsize = 20)
-            ax[i].set_title(f'Channel {channel}', fontsize = 30)
-            ax[i].grid(alpha = 1, which = 'both')
-        plt.xlabel('time [ns]', fontsize = 20)
-        plt.tight_layout()
-        plt.savefig(f'{fig_path}/waveforms_event{event_id}_run{run_number}_angle{angle}.png' ,dpi = 300)
-'''
+            wf[angle], df[angle] = mixing_run(run_number)
+            df[angle].to_parquet(f'./parqs/info_run_{crystal}_{angle}.parq')
+
         data = df[angle][f'amplitude_media_channel2']
         M = np.percentile(data, 90)
         m = np.percentile(data, 0)
         
         
-        if os.path.exists(f'./npys/Mean_Waveform_run{run_number}_channel2.npy'):
-            mean[angle] = np.load(f'./npys/Mean_Waveform_run{run_number}_channel2.npy')
+        if os.path.exists(f'./npys/Mean_Waveform_run_{crystal}_{angle}_channel2.npy'):
+            mean[angle] = np.load(f'./npys/Mean_Waveform_run_{crystal}_{angle}_channel2.npy')
         else:
             mean[angle] = sum_waveform(wf[angle], 2, maximum = True, ampl_max = M, ampl_min = m)
-            np.save(f'./npys/Mean_Waveform_run{run_number}_channel2.npy', mean[angle])
+            np.save(f'./npys/Mean_Waveform_run_{crystal}_{angle}_channel2.npy', mean[angle])
             del wf[angle]
             
         for channel in channels:
@@ -118,12 +110,12 @@ if __name__ == "__main__":
                 plt.axvline(M, linestyle='--', label=f'90° percentile')
             plt.grid(alpha = 1, which = 'both')
             
-            plt.title(f'Amplitude Spectrum Run {run_number} - Channel {channel}')
+            plt.title(f'Amplitude Spectrum Crystal {crystal} - Angle {angle} - Channel {channel}')
             plt.xlabel('Amplitude [mV]')
             plt.ylabel('Event Count')
             plt.tight_layout()
-            plt.savefig(f'{fig_path}/AmplitudeSpectrum_run{run_number}_angle{angle}_channel{channel}.png', dpi = 300)
-            print(colored(f"Amplitude of {run_number} - Channel {channel} Saved","green"))
+            plt.savefig(f'{fig_path}/AmplitudeSpectrum_run{crystal}_{angle}_angle{angle}_channel{channel}.png', dpi = 300)
+            print(colored(f"Amplitude of Crystal {crystal} - Angle {angle} - Channel {channel} Saved","green"))
 
     maxs = {}
     mins = {}
@@ -132,7 +124,7 @@ if __name__ == "__main__":
     diffs = {}
     satu = {}
     plt.figure()
-    for angle, run_number in runs_info[args.crystal][args.beam].items():
+    for angle in runs_info[crystal][beam].keys():
        
         diff = mean[angle]
         plt.plot(diff, label = f'{angle}')
@@ -160,25 +152,25 @@ if __name__ == "__main__":
         plt.xlim(100,500)
         plt.xlabel('')
     plt.tight_layout()
-    plt.title(f'{args.crystal} - {args.beam}')
-    plt.savefig(f'{fig_path}/Mean_waveforms_AngleScan_{args.crystal}_{args.beam}.png', dpi = 300)
+    plt.title(f'{crystal} - {beam}')
+    plt.savefig(f'{fig_path}/Mean_waveforms_AngleScan_{crystal}_{beam}.png', dpi = 300)
     
     plt.figure()
     plt.plot(frac.keys(), frac.values(), 'o-', color = 'darkcyan', markersize = 15)
     plt.xlabel('Angle')
     plt.ylabel('Max/Min in the Cherenkov range')
-    plt.title(f'Cherenkov Yield - {args.crystal} - {args.beam}')
+    plt.title(f'Cherenkov Yield - {crystal} - {beam}')
     plt.grid(alpha = 1)
     plt.tight_layout()
-    plt.savefig(f'{fig_path}/Cherenkov_Yield_Angle_{args.crystal}_{args.beam}_MaxMin.png', dpi = 300)
+    plt.savefig(f'{fig_path}/Cherenkov_Yield_Angle_{crystal}_{beam}_MaxMin.png', dpi = 300)
 
     plt.figure()
     plt.plot(frac2.keys(), frac2.values(), 'o-', color = 'darkcyan', markersize = 15)
     plt.xlabel('Angle')
     plt.ylabel('Picco Prompt/Picco Delayed')
-    plt.title(f'Cherenkov Yield - {args.crystal} - {args.beam}')
+    plt.title(f'Cherenkov Yield - {crystal} - {beam}')
     plt.grid(alpha = 1)
     plt.tight_layout()
-    plt.savefig(f'{fig_path}/Cherenkov_Yield_Angle_{args.crystal}_{args.beam}_PromptDelayed.png', dpi = 300)
+    plt.savefig(f'{fig_path}/Cherenkov_Yield_Angle_{crystal}_{beam}_PromptDelayed.png', dpi = 300)
         
     

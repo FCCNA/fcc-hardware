@@ -102,7 +102,8 @@ def read_waveform(run_index, save_candidate = False, not_all_events = False, max
             break
         if event.header.event_id != 1:
             continue
-        new_data = {'__event__': event.header.serial_number}
+        new_data = {'__event__': event.header.serial_number, 
+                    '__run__': run_index}
         for bank_name, bank in event.banks.items():
             if len(bank.data):
                 channel = np.where(Channel_Enabled)[0][int(bank_name[-1])]

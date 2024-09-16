@@ -55,7 +55,7 @@ def sum_waveform(waveform, channel, maximum = False):
     return wf
 
 
-def read_waveform(run_index, save_candidate, not_all_events = False, max_event = 1000):
+def read_waveform(run_index, save_candidate = False, not_all_events = False, max_event = 1000):
     
     """
     Reads waveform data from a MIDAS file and processes it.
@@ -96,7 +96,7 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
 
     progress_bar = tqdm(total=max_event, colour='green') if max_event > 0 else None
     new_data_list = []
-
+    
     for event in mfile:
         if event.header.serial_number > max_event and not_all_events:
             break
@@ -149,10 +149,10 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
                     
 
                 if event.header.serial_number not in waveform:
-                    waveform[event.header.serial_number] = {}
+                    waveform[f'{event.header.serial_number}_{run_index}'] = {}
 
-                waveform[event.header.serial_number][ch_osci] = wf
-                waveform[event.header.serial_number][f'{ch_osci}media'] = media
+                waveform[f'{event.header.serial_number}_{run_index}'][f'{ch_osci}'] = wf
+                waveform[f'{event.header.serial_number}_{run_index}'][f'{ch_osci}media'] = media
         if progress_bar:
             progress_bar.update(1)
 
@@ -163,3 +163,20 @@ def read_waveform(run_index, save_candidate, not_all_events = False, max_event =
     info = pd.DataFrame(new_data_list)
     return waveform, info
 
+
+
+def mixing_run(run_index, save_candidate = False, not_all_events = False, max_event = 1000):
+    list_wf = []
+    list_df = []
+    for run_number in run_index:
+        tmp_1, tmp_2 = read_waveform(run_number, save_candidate, not_all_events, max_event)
+        list_wf.append(tmp_1)
+        list_df.append(tmp_2)
+
+    result = {}
+    for d in list_wf:
+        result.update(d)
+
+    df_final = pd.concat(list_df, ignore_index=True)
+
+    return result, df_final
